@@ -3,7 +3,8 @@ local RegisterCommand = customCommandHooks.registerCommand
 local RegisterHandler = customEventHooks.registerHandler
 local SendMessage = tes3mp.SendMessage
 
-local DreamMountFunctions = require('custom.dreamMount.dreamMount_functions')
+local DreamMountFunctionsPath = 'custom.dreamMount.dreamMount_functions'
+local DreamMountFunctions = require(DreamMountFunctionsPath)
 
 local Format = string.format
 
@@ -31,7 +32,7 @@ local mountFuncs = {
 }
 
 local function reloadMountFuncs(pid)
-    ProcessCommand(pid, {'load', 'custom.dreamMount.dreamMount_functions'})
+    ProcessCommand(pid, { 'load', DreamMountFunctionsPath })
     DreamMountFunctions.initMountData()
 end
 
