@@ -415,7 +415,7 @@ local function initMountData()
     RecordStores['spell']:Save()
 end
 
-local DreamMounts = {
+return {
     clearCustomVariablesCommand = function(pid, cmd)
         if not validateUser(pid) then return end
 
@@ -480,5 +480,3 @@ local DreamMounts = {
     initMountData = initMountData,
     validateUser = validateUser,
 }
-
-return DreamMounts
