@@ -300,7 +300,7 @@ local function toggleMount(pid, player)
 
     ClearSpellbookChanges(pid)
     SetSpellbookChangesAction(pid, (customVariables[DreamMountEnabledKey] and SpellbookAdd) or SpellbookRemove)
-    AddSpell(pid, getMountSpellIdString(playerData.customVariables.preferredMount))
+    AddSpell(pid, getMountSpellIdString(customVariables.preferredMount))
     SendSpellbookChanges(pid)
 end
 
