@@ -101,14 +101,14 @@ local DreamMountConfigDefault = {
         item = 'rot_c_guar1B_shirtC3',
         model = 'mountedguar1',
         speedBonus = 60,
-        fatigueRestore = MountDefaultFatigueRestore,
+        fatigueRestore = MountDefaultFatigueRestore * 1.5,
     },
     {
         name = "Pack Guar 2",
         item = 'rot_c_guar1A_shirt0',
         model = 'mountedguar1',
         speedBonus = 60,
-        fatigueRestore = MountDefaultFatigueRestore,
+        fatigueRestore = MountDefaultFatigueRestore * 1.5,
     },
     {
         name = "Redoran War Guar",
@@ -121,7 +121,7 @@ local DreamMountConfigDefault = {
         name = "Guar with Drapery (Fine)",
         item = 'rot_c_guar2B_shirt0_ordinator',
         model = 'mountedguar2',
-        speedBonus = 100,
+        speedBonus = 80,
         fatigueRestore = MountDefaultFatigueRestore * 2,
     },
     {
