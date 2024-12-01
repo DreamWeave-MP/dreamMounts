@@ -1,8 +1,14 @@
+-- Need separate data structure for clothing records
+-- Fix bugs with switching spells
+-- Need to remove all mount effects when dismounting
+
 local Concat = table.concat
 local Format = string.format
 
 local AddSpell = tes3mp.AddSpell
 local AddItem = inventoryHelper.addItem
+local AddRecordTypeToPacket = packetBuilder.AddRecordByType
+local ClearRecords = tes3mp.ClearRecords
 local ClearSpellbookChanges = tes3mp.ClearSpellbookChanges
 local ContainsItem = inventoryHelper.containsItem
 local ListBox = tes3mp.ListBox
@@ -12,8 +18,10 @@ local RunConsoleCommandOnPlayer = logicHandler.RunConsoleCommandOnPlayer
 local Save = jsonInterface.quicksave
 local SendBaseInfo = tes3mp.SendBaseInfo
 local SendMessage = tes3mp.SendMessage
+local SendRecordDynamic = tes3mp.SendRecordDynamic
 local SendSpellbookChanges = tes3mp.SendSpellbookChanges
 local SetModel = tes3mp.SetModel
+local SetRecordType = tes3mp.SetRecordType
 local SetSpellbookChangesAction = tes3mp.SetSpellbookChangesAction
 local SlowSave = jsonInterface.save
 
@@ -25,8 +33,9 @@ local FortifyAttribute = enumerations.effects.FORTIFY_ATTRIBUTE
 local RemoveFromInventory = enumerations.inventory.REMOVE
 local RestoreFatigue = enumerations.effects.RESTORE_FATIGUE
 local ShirtSlot = enumerations.equipment.SHIRT
-local SpellbookAdd = enumerations.spellbook.ADD
+-- local SpellbookAdd = enumerations.spellbook.ADD
 local SpellbookRemove = enumerations.spellbook.REMOVE
+local SpellRecordType = enumerations.recordType.SPELL
 
 local DreamMountsGUIID = 381342
 local DreamMountConfigPath = 'custom/dreamMountConfig.json'
@@ -85,8 +94,6 @@ local MountDefaultFatigueRestore = 3
 
 local GauntletMountType = 0
 local ShirtMountType = 1
-
-local DreamMountConfig = {}
 
 local DreamMountConfigDefault = {
     {
@@ -163,6 +170,10 @@ local InventoryItemTemplate = {
     soul = '',
 }
 
+local DreamMountFunctions = {
+    MountConfig = {}
+}
+
 local function mountLog(message)
     print(Format(DreamMountLogStr, DreamMountLogPrefix, message))
 end
@@ -188,25 +199,6 @@ local function getFilePath(model)
     return Format(GuarMountFilePathStr, model)
 end
 
-local function getMountSpellIdString(mountIndex)
-    return Format(DreamMountSpellNameTemplate, DreamMountConfig[mountIndex].item)
-end
-
-local function getMountSpellNameString(mountIndex)
-    return Format(DreamMountSpellNameTemplate, DreamMountConfig[mountIndex].name)
-end
-
-local function getMountEffect(effectTable, mountIndex)
-    return getMountSpellIdString(mountIndex),
-        {
-            name = getMountSpellNameString(mountIndex),
-            subtype = 1,
-            cost = 0,
-            flags = 0,
-            effects = effectTable
-        }
-end
-
 local function mountEquipCommand(refId)
     return Format(DreamMountEquipCommandStr, refId)
 end
@@ -230,106 +222,6 @@ local function enableModelOverrideMount(player, characterData, mountModel)
     player:LoadCharacter()
 end
 
-local function toggleMount(pid, player)
-    local playerData = player.data
-    local customVariables = playerData.customVariables
-    local charData = playerData.character
-    local isMounted = customVariables[DreamMountEnabledKey]
-    local mountIndex = customVariables[DreamMountPreferredMountKey]
-
-    if not isMounted then
-
-        if not mountIndex then
-            SendMessage(pid, Format(DreamMountNoPreferredMountMessage
-                                    , color.Yellow, player.name, DreamMountNoPreferredMountStr))
-            return
-        end
-
-        local mount = DreamMountConfig[mountIndex]
-        local mountId = mount.item
-        local targetSlot = mount.slot or ShirtSlot
-        local replaceItem = playerData.equipment[targetSlot]
-
-        customVariables[DreamMountPrevItemId] = (replaceItem.refId ~= '' and replaceItem.refId) or nil
-
-        addOrRemoveItem(true, mountId, player)
-        RunConsoleCommandOnPlayer(pid, mountEquipCommand(mountId), false)
-
-        local mountType = mount.type
-
-        if not mountType or mountType == ShirtMountType then
-            enableModelOverrideMount(player, charData, mount.model)
-        elseif mountType == GauntletMountType then
-            SendMessage(pid, DreamMountNoStarwindStr, false)
-            return
-        end
-
-        mountLog(Format(DreamMountMountStr, player.name, DreamMountConfig[mountIndex].name))
-
-        customVariables[DreamMountPrevMountTypeKey] = mountType or ShirtMountType
-        customVariables[DreamMountEnabledKey] = true
-    else
-        for _, mountData in ipairs(DreamMountConfig) do
-            addOrRemoveItem(false, mountData.item, player)
-        end
-
-        local lastMountType = customVariables[DreamMountPrevMountTypeKey]
-
-        if not lastMountType then
-            error(DreamMountNoPrevMountErr)
-        elseif lastMountType == ShirtMountType then
-            charData.modelOverride = nil
-            SetModel(pid, '')
-            SendBaseInfo(pid)
-        elseif lastMountType == GauntletMountType then
-            SendMessage(pid, DreamMountNoStarwindStr, false)
-            return
-        end
-
-        local prevItemId = customVariables[DreamMountPrevItemId]
-        if prevItemId and ContainsItem(playerData.inventory, prevItemId) then
-            RunConsoleCommandOnPlayer(pid, mountEquipCommand(prevItemId), false)
-            customVariables[DreamMountPrevItemId] = nil
-        end
-
-        mountLog(Format(DreamMountDismountStr, player.name, lastMountType, prevItemId))
-
-        customVariables[DreamMountPrevMountTypeKey] = nil
-        customVariables[DreamMountEnabledKey] = false
-    end
-
-    ClearSpellbookChanges(pid)
-    SetSpellbookChangesAction(pid, (customVariables[DreamMountEnabledKey] and SpellbookAdd) or SpellbookRemove)
-    AddSpell(pid, getMountSpellIdString(customVariables.preferredMount))
-    SendSpellbookChanges(pid)
-end
-
-local function loadDreamMountConfig()
-    local mountConfig = Load(DreamMountConfigPath)
-    if mountConfig then
-        for mountIndex, mountData in ipairs(mountConfig) do
-            if not DreamMountConfig[mountIndex] then DreamMountConfig[mountIndex] = {} end
-            local liveMountData = DreamMountConfig[mountIndex]
-            for mountKey, mountValue in pairs(mountData) do
-                liveMountData[mountKey] = mountValue
-            end
-        end
-    else
-        Save(DreamMountConfigPath, DreamMountConfigDefault)
-
-        DreamMountConfig = DreamMountConfigDefault
-    end
-    assert(#DreamMountConfig >= 1, 'Empty config found on reload!\n' .. debug.traceback(3))
-end
-
-local function createMountMenuString()
-    DreamMountListString = ''
-    for _, MountData in ipairs(DreamMountConfig) do
-        DreamMountListString = Format(DreamMountMenuItemPattern, DreamMountListString,
-                                      MountData.name or DreamMountMissingMountName)
-    end
-end
-
 local function canRunMountAdminCommands(player)
     return player.data.settings.staffRank >= DreamMountAdminRankRequired
 end
@@ -341,19 +233,6 @@ end
 local function unauthorizedUserMessage(pid)
     assertPidProvided(pid)
     SendMessage(pid, DreamMountUnauthorizedUserMessage, false)
-end
-
-local function validateUser(pid)
-    assertPidProvided(pid)
-    local player = Players[pid]
-    if not player or not player:IsLoggedIn() then return false end
-
-    if not canRunMountAdminCommands(player) then
-        unauthorizedUserMessage(pid)
-        return false
-    end
-
-    return true
 end
 
 local function clearCustomVariables(player)
@@ -385,12 +264,191 @@ local function buildSpellEffectString(mountSpellRecordId, mountSpell)
     return Concat(parts)
 end
 
-local function initMountData()
-    loadDreamMountConfig()
-    createMountMenuString()
+function DreamMountFunctions:createMountMenuString()
+    DreamMountListString = ''
+    for _, MountData in ipairs(self.mountConfig) do
+        DreamMountListString = Format(DreamMountMenuItemPattern, DreamMountListString,
+                                      MountData.name or DreamMountMissingMountName)
+    end
+end
 
-    local permanentSpells = RecordStores['spell'].data.permanentRecords
-    for index, mountData in ipairs(DreamMountConfig) do
+function DreamMountFunctions:toggleMount(pid, player)
+    local playerData = player.data
+    local customVariables = playerData.customVariables
+    local charData = playerData.character
+    local isMounted = customVariables[DreamMountEnabledKey]
+    local mountIndex = customVariables[DreamMountPreferredMountKey]
+
+    if not isMounted then
+
+        if not mountIndex then
+            return SendMessage(pid, Format(DreamMountNoPreferredMountMessage
+                                           , color.Yellow, player.name, DreamMountNoPreferredMountStr))
+        end
+
+        local mount = self.mountConfig[mountIndex]
+        local mountId = mount.item
+        local targetSlot = mount.slot or ShirtSlot
+        local replaceItem = playerData.equipment[targetSlot]
+
+        customVariables[DreamMountPrevItemId] = (replaceItem.refId ~= '' and replaceItem.refId) or nil
+
+        addOrRemoveItem(true, mountId, player)
+        RunConsoleCommandOnPlayer(pid, mountEquipCommand(mountId), false)
+
+        local mountType = mount.type
+
+        if not mountType or mountType == ShirtMountType then
+            enableModelOverrideMount(player, charData, mount.model)
+        elseif mountType == GauntletMountType then
+            return SendMessage(pid, DreamMountNoStarwindStr, false)
+        end
+
+        mountLog(Format(DreamMountMountStr, player.name, self.mountConfig[mountIndex].name))
+
+        customVariables[DreamMountPrevMountTypeKey] = mountType or ShirtMountType
+        customVariables[DreamMountEnabledKey] = true
+    else
+        for _, mountData in ipairs(self.mountConfig) do
+            addOrRemoveItem(false, mountData.item, player)
+        end
+
+        local lastMountType = customVariables[DreamMountPrevMountTypeKey]
+
+        if not lastMountType then
+            error(DreamMountNoPrevMountErr)
+        elseif lastMountType == ShirtMountType then
+            charData.modelOverride = nil
+            SetModel(pid, '')
+            SendBaseInfo(pid)
+        elseif lastMountType == GauntletMountType then
+            return SendMessage(pid, DreamMountNoStarwindStr, false)
+        end
+
+        local prevItemId = customVariables[DreamMountPrevItemId]
+        if prevItemId and ContainsItem(playerData.inventory, prevItemId) then
+            RunConsoleCommandOnPlayer(pid, mountEquipCommand(prevItemId), false)
+            customVariables[DreamMountPrevItemId] = nil
+        end
+
+        mountLog(Format(DreamMountDismountStr, player.name, lastMountType, prevItemId))
+
+        customVariables[DreamMountPrevMountTypeKey] = nil
+        customVariables[DreamMountEnabledKey] = false
+    end
+
+    if not mountIndex then return end
+
+    local targetSpellId = self:getMountSpellIdString(mountIndex)
+
+    player:updateSpellbook {
+        [targetSpellId] = not isMounted,
+    }
+end
+
+function DreamMountFunctions.validateUser(pid)
+    assertPidProvided(pid)
+    local player = Players[pid]
+    if not player or not player:IsLoggedIn() then return end
+
+    if not canRunMountAdminCommands(player) then return unauthorizedUserMessage(pid) end
+
+    return true
+end
+
+function DreamMountFunctions:loadMountConfig()
+    self.mountConfig = Load(DreamMountConfigPath) or DreamMountConfigDefault
+
+    if self.mountConfig == DreamMountConfigDefault then
+        Save(DreamMountConfigPath, self.mountConfig)
+    end
+
+    assert(#self.mountConfig >= 1, 'Empty config found on reload!\n' .. debug.traceback(3))
+end
+
+function DreamMountFunctions.clearCustomVariablesCommand(_, pid, cmd)
+    if not DreamMountFunctions.validateUser(pid) then return end
+
+    local targetPlayer = cmd[2] and Players[tonumber(cmd[2])]
+    if targetPlayer then
+        if not targetPlayer:IsLoggedIn() then return end
+        clearCustomVariables(targetPlayer)
+        SendMessage(pid
+                    , Format(DreamMountSingleVarResetPattern
+                             , DreamMountResetVarsString
+                             , targetPlayer.name)
+                    , false)
+    else
+        local playersWhoReset = {}
+        for index = 0, #Players do
+            local player = Players[index]
+            clearCustomVariables(player)
+            playersWhoReset[#playersWhoReset + 1] = player.name
+        end
+        SendMessage(pid
+                    , Format(DreamMountSingleVarResetPattern
+                             , DreamMountResetVarsString
+                             , Concat(playersWhoReset, ','))
+                    , false)
+    end
+end
+
+function DreamMountFunctions:setPreferredMount(_, pid, idGui, data)
+    if idGui ~= DreamMountsGUIID then return end
+    local player = Players[pid]
+
+    if not player or not player:IsLoggedIn() then return end
+
+    local selection = tonumber(data)
+
+    if not selection or selection < 1 or selection > #self.mountConfig then return end
+    -- print('updating preferred mount')
+
+    player.data.customVariables[DreamMountPreferredMountKey] = selection
+end
+
+function DreamMountFunctions.showPreferredMountMenu(_, pid)
+    return ListBox(pid, DreamMountsGUIID
+                   , DreamMountPreferredMountString, DreamMountListString)
+end
+
+function DreamMountFunctions:slowSaveOnEmptyWorld()
+    if #Players ~= 0 then return end
+    SlowSave(DreamMountConfigPath, self.mountConfig)
+end
+
+function DreamMountFunctions:toggleMountCommand(pid)
+    local player = Players[pid]
+    if not player or not player:IsLoggedIn() then return end
+    self:toggleMount(pid, player)
+end
+
+function DreamMountFunctions.defaultMountConfig(_, pid)
+    if not DreamMountFunctions.validateUser(pid) then return end
+
+    SlowSave(DreamMountConfigPath, DreamMountConfigDefault)
+
+    SendMessage(pid, DreamMountDefaultConfigSavedString, false)
+end
+
+function DreamMountFunctions:reloadMountConfig(pid)
+    if not DreamMountFunctions.validateUser(pid) then return end
+    self:initMountData()
+    SendMessage(pid, DreamMountConfigReloadedMessage, false)
+end
+
+function DreamMountFunctions:initMountData()
+    self:loadMountConfig()
+    self:createMountMenuString()
+
+    local spellRecords = RecordStores['spell']
+    local permanentSpells = spellRecords.data.permanentRecords
+
+    ClearRecords()
+    SetRecordType(SpellRecordType)
+    local spellsSaved = 0
+
+    for index, mountData in ipairs(self.mountConfig) do
         local mountEffects = {}
 
         if mountData.speedBonus then
@@ -402,81 +460,65 @@ local function initMountData()
         end
 
         if #mountEffects >= 1 then
-            local mountSpellRecordId, mountSpell = getMountEffect(mountEffects, index)
-            permanentSpells[mountSpellRecordId] = mountSpell
+            local mountSpellRecordId, mountSpell = self:getMountEffect(mountEffects, index)
             local spellString = buildSpellEffectString(mountSpellRecordId, mountSpell)
+
+            permanentSpells[mountSpellRecordId] = mountSpell
 
             mountLog(Format(DreamMountCreatedSpellRecordStr, spellString))
 
-        elseif permanentSpells[getMountSpellIdString(index)] then
-            permanentSpells[getMountSpellIdString(index)] = nil
+            AddRecordTypeToPacket(mountSpellRecordId, mountSpell, 'spell')
+            spellsSaved = spellsSaved + 1
+
+        else
+            -- This form works, but is hellaciously inefficient.
+            -- We should instead have another function
+            -- Which iterates over active players
+            -- Checks if they have any mount effects enabled
+            -- Re-adds appropriate ones
+            -- And removes ones which shouldn't be there
+
+            local removeSpellId = self:getMountSpellIdString(index)
+            permanentSpells[removeSpellId] = nil
+            for pid, _ in pairs(Players) do
+                ClearSpellbookChanges(pid)
+                SetSpellbookChangesAction(pid, SpellbookRemove)
+                AddSpell(pid, removeSpellId)
+                SendSpellbookChanges(pid)
+                -- print('removed mount spell', index, 'for player', pid)
+            end
         end
     end
-    RecordStores['spell']:Save()
+
+    spellRecords:Save()
+
+    local firstPlayer = next(Players)
+    if spellsSaved < 1 or not firstPlayer then return end
+
+    SendRecordDynamic(firstPlayer, true)
 end
 
-return {
-    clearCustomVariablesCommand = function(pid, cmd)
-        if not validateUser(pid) then return end
+function DreamMountFunctions:getMountEffect(effectTable, mountIndex)
+    return self:getMountSpellIdString(mountIndex),
+        {
+            name = self:getMountSpellNameString(mountIndex),
+            subtype = 1,
+            cost = 0,
+            flags = 0,
+            effects = effectTable
+        }
+end
 
-        local targetPlayer = cmd[2] and Players[tonumber(cmd[2])]
-        if targetPlayer then
-            if not targetPlayer:IsLoggedIn() then return end
-            clearCustomVariables(targetPlayer)
-            SendMessage(pid
-                        , Format(DreamMountSingleVarResetPattern
-                                 , DreamMountResetVarsString
-                                 , targetPlayer.name)
-                        , false)
-        else
-            local playersWhoReset = {}
-            for index = 0, #Players do
-                local player = Players[index]
-                clearCustomVariables(player)
-                playersWhoReset[#playersWhoReset + 1] = player.name
-            end
-            SendMessage(pid
-                        , Format(DreamMountSingleVarResetPattern
-                                 , DreamMountResetVarsString
-                                 , Concat(playersWhoReset, ','))
-                        , false)
-        end
-    end,
-    setPreferredMount = function(_, pid, idGui, data)
-        local player = Players[pid]
-        if idGui ~= DreamMountsGUIID or not player or not player:IsLoggedIn() then return end
+---@param mountIndex integer
+---@return string
+function DreamMountFunctions:getMountSpellIdString(mountIndex)
+    return Format(DreamMountSpellNameTemplate, self.mountConfig[mountIndex].item)
+end
 
-        local selection = tonumber(data)
+---@param mountIndex integer
+---@return string
+function DreamMountFunctions:getMountSpellNameString(mountIndex)
+    return Format(DreamMountSpellNameTemplate, self.mountConfig[mountIndex].name)
+end
 
-        if selection < 1 or selection > #DreamMountConfig then return end
-
-        player.data.customVariables[DreamMountPreferredMountKey] = selection
-    end,
-    showPreferredMountMenu = function(pid)
-        return ListBox(pid, DreamMountsGUIID
-                       , DreamMountPreferredMountString, DreamMountListString)
-    end,
-    slowSaveOnEmptyWorld = function()
-        if #Players ~= 0 then return end
-        SlowSave(DreamMountConfigPath, DreamMountConfig)
-    end,
-    toggleMountCommand = function(pid)
-        local player = Players[pid]
-        if not player or not player:IsLoggedIn() then return end
-        toggleMount(pid, player)
-    end,
-    defaultMountConfig = function(pid)
-        if not validateUser(pid) then return end
-
-        SlowSave(DreamMountConfigPath, DreamMountConfigDefault)
-
-        SendMessage(pid, DreamMountDefaultConfigSavedString, false)
-    end,
-    reloadMountConfig = function(pid)
-        if not validateUser(pid) then return end
-        initMountData()
-        SendMessage(pid, DreamMountConfigReloadedMessage, false)
-    end,
-    initMountData = initMountData,
-    validateUser = validateUser,
-}
+return DreamMountFunctions
