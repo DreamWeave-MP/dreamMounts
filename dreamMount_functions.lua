@@ -71,12 +71,13 @@ local DreamMountInvalidSpellEffectErrorStr = 'Cannot create a spell effect with 
 local DreamMountNoPrevMountErr = 'No previous mount to remove, aborting!'
 local DreamMountMissingMountName = 'No mount name!'
 local DreamMountCreatedSpellRecordStr = 'Created spell record %s'
-local DreamMountDismountStr = '%s dismounted from mount of type: %s'
+local DreamMountDismountStr = '%s dismounted from mount of type: %s, replacing previously equipped item: %s'
 local DreamMountMountStr = '%s mounted %s'
 
 local DreamMountEnabledKey = 'dreamMountIsMounted'
 local DreamMountPreferredMountKey = 'dreamMountPreferredMount'
 local DreamMountPrevMountTypeKey = 'dreamMountPreviousMountType'
+local DreamMountPrevItemId = 'dreamMountPreviousItemId'
 
 local DreamMountAdminRankRequired = 2
 
@@ -246,6 +247,11 @@ local function toggleMount(pid, player)
 
         local mount = DreamMountConfig[mountIndex]
         local mountId = mount.item
+        local targetSlot = mount.slot or ShirtSlot
+        local replaceItem = playerData.equipment[targetSlot]
+
+        customVariables[DreamMountPrevItemId] = (replaceItem.refId ~= '' and replaceItem.refId) or nil
+
         addOrRemoveItem(true, mountId, player)
         RunConsoleCommandOnPlayer(pid, mountEquipCommand(mountId), false)
 
@@ -280,7 +286,13 @@ local function toggleMount(pid, player)
             return
         end
 
-        mountLog(Format(DreamMountDismountStr, player.name, lastMountType))
+        local prevItemId = customVariables[DreamMountPrevItemId]
+        if prevItemId and ContainsItem(playerData.inventory, prevItemId) then
+            RunConsoleCommandOnPlayer(pid, mountEquipCommand(prevItemId), false)
+            customVariables[DreamMountPrevItemId] = nil
+        end
+
+        mountLog(Format(DreamMountDismountStr, player.name, lastMountType, prevItemId))
 
         customVariables[DreamMountPrevMountTypeKey] = nil
         customVariables[DreamMountEnabledKey] = false
