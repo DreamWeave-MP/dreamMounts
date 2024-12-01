@@ -365,7 +365,7 @@ local function buildSpellEffectString(mountSpellRecordId, mountSpell)
     for _, spellEffect in ipairs(mountSpell.effects) do
         parts[#parts + 1] = '\n'
         for k, v in pairs(spellEffect) do
-            parts[#parts + 1] = Format('%s : %s ', k, v)
+            parts[#parts + 1] = Format('%s: %s ', k, v)
         end
         parts[#parts + 1] = '\n----------'
     end
