@@ -33,7 +33,7 @@ local FortifyAttribute = enumerations.effects.FORTIFY_ATTRIBUTE
 local RemoveFromInventory = enumerations.inventory.REMOVE
 local RestoreFatigue = enumerations.effects.RESTORE_FATIGUE
 local ShirtSlot = enumerations.equipment.SHIRT
--- local SpellbookAdd = enumerations.spellbook.ADD
+local SpellbookAdd = enumerations.spellbook.ADD
 local SpellbookRemove = enumerations.spellbook.REMOVE
 local SpellRecordType = enumerations.recordType.SPELL
 
@@ -87,6 +87,7 @@ local DreamMountEnabledKey = 'dreamMountIsMounted'
 local DreamMountPreferredMountKey = 'dreamMountPreferredMount'
 local DreamMountPrevMountTypeKey = 'dreamMountPreviousMountType'
 local DreamMountPrevItemId = 'dreamMountPreviousItemId'
+local DreamMountPrevSpellId = 'dreamMountPreviousSpellId'
 
 local DreamMountAdminRankRequired = 2
 
@@ -339,10 +340,11 @@ function DreamMountFunctions:toggleMount(pid, player)
 
     if not mountIndex then return end
 
-    local targetSpellId = self:getMountSpellIdString(mountIndex)
-
+    local targetSpell = self:getMountSpellIdString(mountIndex)
+    customVariables[DreamMountPrevSpellId] = (not isMounted and targetSpell) or nil
+    -- print('from toggleMount', targetSpell, isMounted, customVariables[DreamMountPrevSpellId])
     player:updateSpellbook {
-        [targetSpellId] = not isMounted,
+        [targetSpell] = not isMounted,
     }
 end
 
@@ -437,6 +439,25 @@ function DreamMountFunctions:reloadMountConfig(pid)
     SendMessage(pid, DreamMountConfigReloadedMessage, false)
 end
 
+function DreamMountFunctions.resetPlayerSpells()
+    for _, player in pairs(Players) do
+        local prevMountSpell = player.data.customVariables[DreamMountPrevSpellId]
+        if prevMountSpell then
+
+            if RecordStores['spell'].data.permanentRecords[prevMountSpell] ~= nil then
+                player:updateSpellbook {
+                    [prevMountSpell] = false,
+                }
+            end
+
+            player:updateSpellbook {
+                [prevMountSpell] = true,
+            }
+
+        end
+    end
+end
+
 function DreamMountFunctions:initMountData()
     self:loadMountConfig()
     self:createMountMenuString()
@@ -480,13 +501,14 @@ function DreamMountFunctions:initMountData()
 
             local removeSpellId = self:getMountSpellIdString(index)
             permanentSpells[removeSpellId] = nil
-            for pid, _ in pairs(Players) do
-                ClearSpellbookChanges(pid)
-                SetSpellbookChangesAction(pid, SpellbookRemove)
-                AddSpell(pid, removeSpellId)
-                SendSpellbookChanges(pid)
+            -- for pid, _ in pairs(Players) do
+            --     ClearSpellbookChanges(pid)
+            --     SetSpellbookChangesAction(pid, SpellbookRemove)
+            --     AddSpell(pid, removeSpellId)
+            --     SendSpellbookChanges(pid)
+
                 -- print('removed mount spell', index, 'for player', pid)
-            end
+            -- end
         end
     end
 
@@ -496,6 +518,7 @@ function DreamMountFunctions:initMountData()
     if spellsSaved < 1 or not firstPlayer then return end
 
     SendRecordDynamic(firstPlayer, true)
+    self.resetPlayerSpells()
 end
 
 function DreamMountFunctions:getMountEffect(effectTable, mountIndex)

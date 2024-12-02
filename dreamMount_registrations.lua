@@ -80,7 +80,7 @@ local function reloadMountFuncs(pid)
 end
 
 ---@param failedCommand string
----@return string
+---@return string Unsupported mount message
 local function unsupportedCommandString(failedCommand)
   return Format(DreamMountUnsupportedCommandStr
                             , MediumBlue, failedCommand, Red)
