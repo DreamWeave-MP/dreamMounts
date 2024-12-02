@@ -289,10 +289,6 @@ function DreamMountFunctions:toggleMount(pid, player)
 
         local mount = self.mountConfig[mountIndex]
         local mountId = mount.item
-        local targetSlot = mount.slot or ShirtSlot
-        local replaceItem = playerData.equipment[targetSlot]
-
-        customVariables[DreamMountPrevItemId] = (replaceItem.refId ~= '' and replaceItem.refId) or nil
 
         addOrRemoveItem(true, mountId, player)
         RunConsoleCommandOnPlayer(pid, mountEquipCommand(mountId), false)
@@ -305,8 +301,12 @@ function DreamMountFunctions:toggleMount(pid, player)
             return SendMessage(pid, DreamMountNoStarwindStr, false)
         end
 
-        mountLog(Format(DreamMountMountStr, player.name, self.mountConfig[mountIndex].name))
+        mountLog(Format(DreamMountMountStr, player.name, mount.name))
 
+        local targetSlot = mount.slot or ShirtSlot
+        local replaceItem = playerData.equipment[targetSlot]
+
+        customVariables[DreamMountPrevItemId] = (replaceItem.refId ~= '' and replaceItem.refId) or nil
         customVariables[DreamMountPrevMountTypeKey] = mountType or ShirtMountType
         customVariables[DreamMountEnabledKey] = true
     else
@@ -333,7 +333,6 @@ function DreamMountFunctions:toggleMount(pid, player)
         end
 
         mountLog(Format(DreamMountDismountStr, player.name, lastMountType, prevItemId))
-
         customVariables[DreamMountPrevMountTypeKey] = nil
         customVariables[DreamMountEnabledKey] = false
     end
@@ -342,7 +341,6 @@ function DreamMountFunctions:toggleMount(pid, player)
 
     local targetSpell = self:getMountSpellIdString(mountIndex)
     customVariables[DreamMountPrevSpellId] = (not isMounted and targetSpell) or nil
-    -- print('from toggleMount', targetSpell, isMounted, customVariables[DreamMountPrevSpellId])
     player:updateSpellbook {
         [targetSpell] = not isMounted,
     }
@@ -492,23 +490,8 @@ function DreamMountFunctions:initMountData()
             spellsSaved = spellsSaved + 1
 
         else
-            -- This form works, but is hellaciously inefficient.
-            -- We should instead have another function
-            -- Which iterates over active players
-            -- Checks if they have any mount effects enabled
-            -- Re-adds appropriate ones
-            -- And removes ones which shouldn't be there
-
             local removeSpellId = self:getMountSpellIdString(index)
             permanentSpells[removeSpellId] = nil
-            -- for pid, _ in pairs(Players) do
-            --     ClearSpellbookChanges(pid)
-            --     SetSpellbookChangesAction(pid, SpellbookRemove)
-            --     AddSpell(pid, removeSpellId)
-            --     SendSpellbookChanges(pid)
-
-                -- print('removed mount spell', index, 'for player', pid)
-            -- end
         end
     end
 
