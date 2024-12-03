@@ -3,9 +3,11 @@ local Traceback = debug.traceback
 
 local AddSpell = tes3mp.AddSpell
 local ClearSpellbookChanges = tes3mp.ClearSpellbookChanges
+local EquipItem = tes3mp.EquipItem
 local ProcessCommand = commandHandler.ProcessCommand
 local RegisterCommand = customCommandHooks.registerCommand
 local RegisterHandler = customEventHooks.registerHandler
+local SendEquipment = tes3mp.SendEquipment
 local SendMessage = tes3mp.SendMessage
 local SendSpellbookChanges = tes3mp.SendSpellbookChanges
 local SetSpellbookChangesAction = tes3mp.SetSpellbookChangesAction
@@ -19,14 +21,20 @@ local Red = color.Red
 local DreamMountFunctionsPath = 'custom.dreamMount.dreamMount_functions'
 local DreamMountFunctions = require(DreamMountFunctionsPath)
 
+local DreamMountInvalidEquipSlotStr = "Invalid equipment slot provided %s!"
 local DreamMountNoCallbackErr = 'No DreamMount callback associated with this function %s!\n%s'
 local DreamMountUnsupportedCommandStr = '%sUnsupported DreamMount subcommand %s%s!'
 local DreamCoreNoPlayerSpellbookWithoutSelfStr = 'Cannot call player spellbook update without self!\n'
 local DreamCoreInvalidSpellDataStr = 'Invalid spellData table provided!\n'
 
----@class SpellSendData
----@field self table Player table
----@field spellData table<string, boolean>
+local ItemTemplate = dataTableBuilder.BuildObjectData()
+local EquipEnums = enumerations.equipment
+
+---@alias SpellSendData table<string, boolean>
+---@alias EquipSendData table<string, string|false>
+
+---@param self table Player table indexed from Players[pid]
+---@param spellData SpellSendData
 local function updatePlayerSpellbook(self, spellData)
   assert(self,  DreamCoreNoPlayerSpellbookWithoutSelfStr .. Traceback(3))
   assert(type(spellData) == 'table', DreamCoreInvalidSpellDataStr .. Traceback(3))
@@ -42,9 +50,37 @@ local function updatePlayerSpellbook(self, spellData)
   SendSpellbookChanges(playerId)
 end
 
+---@param self table Player table index from Players[pid]
+---@param equipmentUpdateTable EquipSendData
+local function updateEquipment(self, equipmentUpdateTable)
+  local myPid = self.pid
+  local playerEquipment = self.data.equipment
+  local playerInventory = self.data.inventory
+  local prevEquipment = self.previousEquipment
+
+  for equipmentSlot, itemId in pairs(equipmentUpdateTable) do
+    local slotId = EquipEnums[equipmentSlot]
+    assert(slotId, Format(DreamMountInvalidEquipSlotStr, equipmentSlot))
+    if itemId ~= false and inventoryHelper.containsItem(playerInventory, itemId) then
+      local targetItem = ItemTemplate
+      targetItem.refId = itemId
+
+      EquipItem(myPid, slotId
+                          , targetItem.refId, targetItem.count
+                          , targetItem.charge, targetItem.enchantmentCharge)
+      prevEquipment[slotId] = playerEquipment[slotId]
+      playerEquipment[slotId] = targetItem
+    else
+      playerEquipment[slotId] = nil
+    end
+  end
+  SendEquipment(myPid)
+end
+
 --- Extend built-in functionality of certain object types on server initialization
 local function extendBuiltins()
   Player['updateSpellbook'] = updatePlayerSpellbook
+  Player['updateEquipment'] = updateEquipment
 end
 
 ---@class HandlerRegistration

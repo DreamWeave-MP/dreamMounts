@@ -5,24 +5,19 @@
 local Concat = table.concat
 local Format = string.format
 
-local AddSpell = tes3mp.AddSpell
 local AddItem = inventoryHelper.addItem
 local AddRecordTypeToPacket = packetBuilder.AddRecordByType
 local ClearRecords = tes3mp.ClearRecords
-local ClearSpellbookChanges = tes3mp.ClearSpellbookChanges
 local ContainsItem = inventoryHelper.containsItem
 local ListBox = tes3mp.ListBox
 local Load = jsonInterface.load
 local RemoveClosestItem = inventoryHelper.removeClosestItem
-local RunConsoleCommandOnPlayer = logicHandler.RunConsoleCommandOnPlayer
 local Save = jsonInterface.quicksave
 local SendBaseInfo = tes3mp.SendBaseInfo
 local SendMessage = tes3mp.SendMessage
 local SendRecordDynamic = tes3mp.SendRecordDynamic
-local SendSpellbookChanges = tes3mp.SendSpellbookChanges
 local SetModel = tes3mp.SetModel
 local SetRecordType = tes3mp.SetRecordType
-local SetSpellbookChangesAction = tes3mp.SetSpellbookChangesAction
 local SlowSave = jsonInterface.save
 
 local Players = Players
@@ -33,8 +28,6 @@ local FortifyAttribute = enumerations.effects.FORTIFY_ATTRIBUTE
 local RemoveFromInventory = enumerations.inventory.REMOVE
 local RestoreFatigue = enumerations.effects.RESTORE_FATIGUE
 local ShirtSlot = enumerations.equipment.SHIRT
-local SpellbookAdd = enumerations.spellbook.ADD
-local SpellbookRemove = enumerations.spellbook.REMOVE
 local SpellRecordType = enumerations.recordType.SPELL
 
 local DreamMountsGUIID = 381342
@@ -73,15 +66,13 @@ local DreamMountSpellNameTemplate = '%s Speed Buff'
 local DreamMountLogPrefix = 'DreamMount'
 local DreamMountLogStr = '[ %s ]: %s'
 
-local DreamMountEquipCommandStr = 'player->equip %s'
-
-local DreamMountNoPidProvided = 'No PlayerID provided!\n%s'
-local DreamMountInvalidSpellEffectErrorStr = 'Cannot create a spell effect with no magnitude!'
-local DreamMountNoPrevMountErr = 'No previous mount to remove, aborting!'
-local DreamMountMissingMountName = 'No mount name!'
-local DreamMountCreatedSpellRecordStr = 'Created spell record %s'
 local DreamMountDismountStr = '%s dismounted from mount of type: %s, replacing previously equipped item: %s'
+local DreamMountCreatedSpellRecordStr = 'Created spell record %s'
+local DreamMountInvalidSpellEffectErrorStr = 'Cannot create a spell effect with no magnitude!'
+local DreamMountMissingMountName = 'No mount name!'
 local DreamMountMountStr = '%s mounted %s'
+local DreamMountNoPidProvided = 'No PlayerID provided!\n%s'
+local DreamMountNoPrevMountErr = 'No previous mount to remove, aborting!'
 
 local DreamMountEnabledKey = 'dreamMountIsMounted'
 local DreamMountPreferredMountKey = 'dreamMountPreferredMount'
@@ -200,10 +191,6 @@ local function getFilePath(model)
     return Format(GuarMountFilePathStr, model)
 end
 
-local function mountEquipCommand(refId)
-    return Format(DreamMountEquipCommandStr, refId)
-end
-
 local function addOrRemoveItem(addOrRemove, mount, player)
     local inventory = player.data.inventory
     local hasMountAlready = ContainsItem(inventory, mount)
@@ -306,7 +293,9 @@ function DreamMountFunctions:toggleMount(pid, player)
         local mountId = mount.item
 
         addOrRemoveItem(true, mountId, player)
-        RunConsoleCommandOnPlayer(pid, mountEquipCommand(mountId), false)
+        player:updateEquipment {
+            SHIRT = mountId
+        }
 
         local mountType = mount.type
 
@@ -319,7 +308,7 @@ function DreamMountFunctions:toggleMount(pid, player)
         mountLog(Format(DreamMountMountStr, player.name, mount.name))
 
         local targetSlot = mount.slot or ShirtSlot
-        local replaceItem = playerData.equipment[targetSlot]
+        local replaceItem = player.previousEquipment[targetSlot]
 
         customVariables[DreamMountPrevItemId] = (replaceItem.refId ~= '' and replaceItem.refId) or nil
         customVariables[DreamMountPrevMountTypeKey] = mountType or ShirtMountType
@@ -343,7 +332,9 @@ function DreamMountFunctions:toggleMount(pid, player)
 
         local prevItemId = customVariables[DreamMountPrevItemId]
         if prevItemId and ContainsItem(playerData.inventory, prevItemId) then
-            RunConsoleCommandOnPlayer(pid, mountEquipCommand(prevItemId), false)
+            player:updateEquipment {
+                SHIRT = prevItemId
+            }
             customVariables[DreamMountPrevItemId] = nil
         end
 
