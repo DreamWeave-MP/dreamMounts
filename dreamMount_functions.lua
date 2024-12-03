@@ -72,7 +72,7 @@ local DreamMountInvalidSpellEffectErrorStr = 'Cannot create a spell effect with 
 local DreamMountMissingMountName = 'No mount name!'
 local DreamMountMountStr = '%s mounted %s'
 local DreamMountNoPidProvided = 'No PlayerID provided!\n%s'
-local DreamMountNoPrevMountErr = 'No previous mount to remove, aborting!'
+local DreamMountNoPrevMountErr = 'No previous mount to remove for player %s, aborting!'
 
 local DreamMountEnabledKey = 'dreamMountIsMounted'
 local DreamMountPreferredMountKey = 'dreamMountPreferredMount'
@@ -321,7 +321,7 @@ function DreamMountFunctions:toggleMount(pid, player)
         local lastMountType = customVariables[DreamMountPrevMountTypeKey]
 
         if not lastMountType then
-            error(DreamMountNoPrevMountErr)
+            error(Format(DreamMountNoPrevMountErr, player.name))
         elseif lastMountType == ShirtMountType then
             charData.modelOverride = nil
             SetModel(pid, '')
