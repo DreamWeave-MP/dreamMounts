@@ -265,6 +265,21 @@ local function buildSpellEffectString(mountSpellRecordId, mountSpell)
     return Concat(parts)
 end
 
+local function resetMountSpellForPlayer(player, spellRecords)
+    local prevMountSpell = player.data.customVariables[DreamMountPrevSpellId]
+    if not prevMountSpell then return end
+
+    player:updateSpellbook {
+        [prevMountSpell] = false,
+    }
+
+    if spellRecords[prevMountSpell] then
+        player:updateSpellbook {
+            [prevMountSpell] = true,
+        }
+    end
+end
+
 function DreamMountFunctions:createMountMenuString()
     DreamMountListString = ''
     for _, MountData in ipairs(self.mountConfig) do
@@ -438,21 +453,9 @@ function DreamMountFunctions:reloadMountConfig(pid)
 end
 
 function DreamMountFunctions.resetPlayerSpells()
+    local spellRecords = RecordStores['spell'].data.permanentRecords
     for _, player in pairs(Players) do
-        local prevMountSpell = player.data.customVariables[DreamMountPrevSpellId]
-        if prevMountSpell then
-
-            if RecordStores['spell'].data.permanentRecords[prevMountSpell] ~= nil then
-                player:updateSpellbook {
-                    [prevMountSpell] = false,
-                }
-            end
-
-            player:updateSpellbook {
-                [prevMountSpell] = true,
-            }
-
-        end
+        resetMountSpellForPlayer(player, spellRecords)
     end
 end
 
