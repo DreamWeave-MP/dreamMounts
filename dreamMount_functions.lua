@@ -1,10 +1,10 @@
 -- Need separate data structure for clothing records
--- Fix bugs with switching spells
--- Need to remove all mount effects when dismounting
 
+-- STL Functions
 local Concat = table.concat
 local Format = string.format
 
+-- TES3MP Functions
 local AddItem = inventoryHelper.addItem
 local AddRecordTypeToPacket = packetBuilder.AddRecordByType
 local ClearRecords = tes3mp.ClearRecords
@@ -15,77 +15,76 @@ local RemoveClosestItem = inventoryHelper.removeClosestItem
 local Save = jsonInterface.quicksave
 local SendBaseInfo = tes3mp.SendBaseInfo
 local SendMessage = tes3mp.SendMessage
-local SendRecordDynamic = tes3mp.SendRecordDynamic
 local SetModel = tes3mp.SetModel
+local SendRecordDynamic = tes3mp.SendRecordDynamic
 local SetRecordType = tes3mp.SetRecordType
 local SlowSave = jsonInterface.save
 
-local Players = Players
-
+--TES3MP Globals
 local AddToInventory = enumerations.inventory.ADD
 local FortifyAttribute = enumerations.effects.FORTIFY_ATTRIBUTE
 -- local LeftGauntletSlot = enumerations.equipment.LEFT_GAUNTLET
 local RemoveFromInventory = enumerations.inventory.REMOVE
 local RestoreFatigue = enumerations.effects.RESTORE_FATIGUE
+local Players = Players
 local ShirtSlot = enumerations.equipment.SHIRT
 local SpellRecordType = enumerations.recordType.SPELL
 
+-- Local Constants
+local DreamMountAdminRankRequired = 2
 local DreamMountsGUIID = 381342
+local GauntletMountType = 0
+local MountDefaultFatigueRestore = 3
+local ShirtMountType = 1
+
+-- Paths
 local DreamMountConfigPath = 'custom/dreamMountConfig.json'
 local GuarMountFilePathStr = 'rot/anim/%s.nif'
 
-local DreamMountListString
-local DreamMountDefaultConfigSavedString =
-    Format('%sSaved default mount config to %sdata/%s\n'
-    , color.MediumBlue, color.Green, DreamMountConfigPath)
-
-local DreamMountUnauthorizedUserMessage =
-    Format('%sYou are not authorized to run %sdreamMount %sadmin commands!\n'
-    , color.Red, color.MediumBlue, color.Red)
-
+-- UI Messages
 local DreamMountConfigReloadedMessage =
     Format(
     '%sMount config reloaded, %smenu reconstructed, %sand spell records remade! %sDreamMount%s has completely reinitialized.\n'
     , color.MediumBlue, color.Green, color.MediumBlue, color.Navy, color.Green)
-
-local DreamMountResetVarsString = Format('%sReset DreamMount variables for %s'
-, color.MediumBlue, color.Green)
-
-local DreamMountNoPreferredMountStr = Format('%sdoes not have a preferred mount set!\n'
-                                             , color.Red)
-local DreamMountNoPreferredMountMessage = '%s%s %s'
-
+local DreamMountDefaultConfigSavedString =
+    Format('%sSaved default mount config to %sdata/%s\n'
+    , color.MediumBlue, color.Green, DreamMountConfigPath)
+local DreamMountListString
+local DreamMountNoPreferredMountStr = Format('%sdoes not have a preferred mount set!\n' , color.Red)
 local DreamMountNoStarwindStr = Format('%sStarwind%s mounts not yet supported!\n'
                                        , color.MediumBlue, color.Red)
-
+local DreamMountResetVarsString = Format('%sReset DreamMount variables for %s'
+, color.MediumBlue, color.Green)
 local DreamMountPreferredMountString = 'Select your preferred mount.'
+local DreamMountUnauthorizedUserMessage =
+    Format('%sYou are not authorized to run %sdreamMount %sadmin commands!\n'
+    , color.Red, color.MediumBlue, color.Red)
 
+-- Patterns
+local DreamMountNoPreferredMountMessage = '%s%s %s'
 local DreamMountSingleVarResetPattern = '%s%s.\n'
 local DreamMountMenuItemPattern = '%s\n%s'
 local DreamMountSpellNameTemplate = '%s Speed Buff'
-local DreamMountLogPrefix = 'DreamMount'
 local DreamMountLogStr = '[ %s ]: %s'
 
-local DreamMountDismountStr = '%s dismounted from mount of type: %s, replacing previously equipped item: %s'
+-- Standard log messages
 local DreamMountCreatedSpellRecordStr = 'Created spell record %s'
+local DreamMountDismountStr = '%s dismounted from mount of type: %s, replacing previously equipped item: %s'
+local DreamMountLogPrefix = 'DreamMount'
+local DreamMountMountStr = '%s mounted %s'
+
+-- Error Strings
 local DreamMountInvalidSpellEffectErrorStr = 'Cannot create a spell effect with no magnitude!'
 local DreamMountMissingMountName = 'No mount name!'
-local DreamMountMountStr = '%s mounted %s'
 local DreamMountNoPidProvided = 'No PlayerID provided!\n%s'
 local DreamMountNoPrevMountErr = 'No previous mount to remove for player %s, aborting!'
 
+-- CustomVariables index keys
 local DreamMountEnabledKey = 'dreamMountIsMounted'
 local DreamMountPreferredMountKey = 'dreamMountPreferredMount'
-local DreamMountPrevMountTypeKey = 'dreamMountPreviousMountType'
 local DreamMountPrevItemId = 'dreamMountPreviousItemId'
+local DreamMountPrevMountTypeKey = 'dreamMountPreviousMountType'
 local DreamMountPrevSpellId = 'dreamMountPreviousSpellId'
-
-local DreamMountAdminRankRequired = 2
-
-local MountDefaultFatigueRestore = 3
-
-local GauntletMountType = 0
-local ShirtMountType = 1
 
 local DreamMountConfigDefault = {
     {
