@@ -3,6 +3,7 @@ local Traceback = debug.traceback
 
 local AddSpell = tes3mp.AddSpell
 local ClearSpellbookChanges = tes3mp.ClearSpellbookChanges
+local ContainsItem = inventoryHelper.containsItem
 local EquipItem = tes3mp.EquipItem
 local ProcessCommand = commandHandler.ProcessCommand
 local RegisterCommand = customCommandHooks.registerCommand
@@ -21,11 +22,12 @@ local Red = color.Red
 local DreamMountFunctionsPath = 'custom.dreamMount.dreamMount_functions'
 local DreamMountFunctions = require(DreamMountFunctionsPath)
 
-local DreamMountInvalidEquipSlotStr = "Invalid equipment slot provided %s!"
+local DreamMountUnsupportedCommandStr = '%sUnsupported DreamMount subcommand %s%s!\n'
+
+local DreamMountInvalidEquipSlotErr = "Invalid equipment slot provided %s!"
 local DreamMountNoCallbackErr = 'No DreamMount callback associated with this function %s!\n%s'
-local DreamMountUnsupportedCommandStr = '%sUnsupported DreamMount subcommand %s%s!'
-local DreamCoreNoPlayerSpellbookWithoutSelfStr = 'Cannot call player spellbook update without self!\n'
-local DreamCoreInvalidSpellDataStr = 'Invalid spellData table provided!\n'
+local DreamCoreNoPlayerSpellbookWithoutSelfErr = 'Cannot call player spellbook update without self!\n'
+local DreamCoreInvalidSpellDataErr = 'Invalid spellData table provided!\n'
 
 local ItemTemplate = dataTableBuilder.BuildObjectData()
 local EquipEnums = enumerations.equipment
@@ -36,8 +38,8 @@ local EquipEnums = enumerations.equipment
 ---@param self table Player table indexed from Players[pid]
 ---@param spellData SpellSendData
 local function updatePlayerSpellbook(self, spellData)
-  assert(self,  DreamCoreNoPlayerSpellbookWithoutSelfStr .. Traceback(3))
-  assert(type(spellData) == 'table', DreamCoreInvalidSpellDataStr .. Traceback(3))
+  assert(self,  DreamCoreNoPlayerSpellbookWithoutSelfErr .. Traceback(3))
+  assert(type(spellData) == 'table', DreamCoreInvalidSpellDataErr .. Traceback(3))
 
   local playerId = self.pid
   ClearSpellbookChanges(playerId)
@@ -54,24 +56,25 @@ end
 ---@param equipmentUpdateTable EquipSendData
 local function updateEquipment(self, equipmentUpdateTable)
   local myPid = self.pid
-  local playerEquipment = self.data.equipment
-  local playerInventory = self.data.inventory
+  local myData = self.data
   local prevEquipment = self.previousEquipment
+  local myEquipment = myData.equipment
+  local myInventory = myData.inventory
 
   for equipmentSlot, itemId in pairs(equipmentUpdateTable) do
     local slotId = EquipEnums[equipmentSlot]
-    assert(slotId, Format(DreamMountInvalidEquipSlotStr, equipmentSlot))
-    if itemId ~= false and inventoryHelper.containsItem(playerInventory, itemId) then
+    assert(slotId, Format(DreamMountInvalidEquipSlotErr, equipmentSlot))
+    if itemId ~= false and ContainsItem(myInventory, itemId) then
       local targetItem = ItemTemplate
       targetItem.refId = itemId
 
       EquipItem(myPid, slotId
                           , targetItem.refId, targetItem.count
                           , targetItem.charge, targetItem.enchantmentCharge)
-      prevEquipment[slotId] = playerEquipment[slotId]
-      playerEquipment[slotId] = targetItem
+      prevEquipment[slotId] = myEquipment[slotId]
+      myEquipment[slotId] = targetItem
     else
-      playerEquipment[slotId] = nil
+      myEquipment[slotId] = nil
     end
   end
   SendEquipment(myPid)
