@@ -469,9 +469,14 @@ function DreamMountFunctions:setPreferredMount(_, pid, idGui, data)
     local selection = tonumber(data)
 
     if not selection or selection < 1 or selection > #self.mountConfig then return end
-    -- print('updating preferred mount')
 
-    player.data.customVariables[DreamMountPreferredMountKey] = selection
+    local customVariables = player.data.customVariables
+
+    if customVariables[DreamMountEnabledKey] then
+        self:toggleMount(pid, player)
+    end
+
+    customVariables[DreamMountPreferredMountKey] = selection
 end
 
 function DreamMountFunctions.showPreferredMountMenu(_, pid)
