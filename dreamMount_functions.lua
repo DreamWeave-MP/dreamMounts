@@ -92,7 +92,8 @@ local DreamMountPrevSpellId = 'dreamMountPreviousSpellId'
 
 -- MWScripts
 
-local DreamMountGauntletMountDismountScript = [[
+local MWScripts = {
+    DreamMountDismount = [[
 Begin DreamMountDismount
   short doOnce
 
@@ -121,9 +122,8 @@ Begin DreamMountDismount
   stopscript DreamMountDismount
 
 End DreamMountDismount
-]]
-
-local DreamMountGauntletMountMountScript = [[
+]],
+    DreamMountMount = [[
 Begin DreamMountMount
   short doOnce
   short wasThirdPerson
@@ -151,7 +151,8 @@ Begin DreamMountMount
   endif
 
 End DreamMountMount
-]]
+]],
+}
 
 local DreamMountConfigDefault = {
     {
@@ -653,8 +654,9 @@ function DreamMountFunctions:initMountData()
 
     local scriptRecordStore = RecordStores['script']
     local scriptRecords = scriptRecordStore.data.permanentRecords
-    scriptRecords['DreamMountDismount'] = { scriptText = DreamMountGauntletMountDismountScript }
-    scriptRecords['DreamMountMount'] = { scriptText = DreamMountGauntletMountMountScript }
+    for scriptId, scriptText in pairs(MWScripts) do
+        scriptRecords[scriptId] = { scriptText = scriptText }
+    end
     scriptRecordStore:Save()
 end
 
