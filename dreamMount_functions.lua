@@ -37,6 +37,11 @@ local GauntletMountType = 0
 local MountDefaultFatigueRestore = 3
 local ShirtMountType = 1
 
+local MountSlotMap = {
+    [GauntletMountType] = "LEFT_GAUNTLET",
+    [ShirtMountType] = "SHIRT",
+}
+
 -- Paths
 local DreamMountConfigPath = 'custom/dreamMountConfig.json'
 local GuarMountFilePathStr = 'rot/anim/%s.nif'
@@ -290,27 +295,32 @@ function DreamMountFunctions:toggleMount(pid, player)
 
         local mount = self.mountConfig[mountIndex]
         local mountId = mount.item
+        local mountType = mount.mountType or ShirtMountType
+        local mountSlot = MountSlotMap[mountType]
+        local mappedEquipSlot = enumerations.equipment[mountSlot]
+
+        local replaceItem = playerData.equipment[mappedEquipSlot]
+
+        if replaceItem.refId and replaceItem.refId ~= ''
+        then replaceItem = replaceItem.refId
+        else replaceItem = nil
+        end
 
         addOrRemoveItem(true, mountId, player)
         player:updateEquipment {
-            SHIRT = mountId
+            [mountSlot] = mountId
         }
-
-        local mountType = mount.type
 
         if not mountType or mountType == ShirtMountType then
             enableModelOverrideMount(player, charData, mount.model)
         elseif mountType == GauntletMountType then
-            return SendMessage(pid, DreamMountNoStarwindStr, false)
+            RunConsoleCommandOnPlayer(pid, 'startscript DreamMountMount')
         end
 
         mountLog(Format(DreamMountMountStr, player.name, mount.name))
 
-        local targetSlot = mount.slot or ShirtSlot
-        local replaceItem = player.previousEquipment[targetSlot]
-
-        customVariables[DreamMountPrevItemId] = (replaceItem.refId ~= '' and replaceItem.refId) or nil
-        customVariables[DreamMountPrevMountTypeKey] = mountType or ShirtMountType
+        customVariables[DreamMountPrevItemId] = replaceItem
+        customVariables[DreamMountPrevMountTypeKey] = mountType
         customVariables[DreamMountEnabledKey] = true
     else
         for _, mountData in ipairs(self.mountConfig) do
