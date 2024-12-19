@@ -381,9 +381,7 @@ function DreamMountFunctions:createKeyRecords(firstPlayer)
     local miscRecords = RecordStores['miscellaneous']
     local permanentMiscRecords = miscRecords.data.permanentRecords
 
-    local sendRecords = false
     if firstPlayer then
-        sendRecords = true
         ClearRecords()
         SetRecordType(MiscRecordType)
     end
@@ -395,14 +393,14 @@ function DreamMountFunctions:createKeyRecords(firstPlayer)
         permanentMiscRecords[keyId] = keyRecord
         keysSaved = keysSaved + 1
 
-        if sendRecords then
+        if firstPlayer then
             AddRecordTypeToPacket(keyId, keyRecord, 'miscellaneous')
         end
     end
 
     miscRecords:Save()
 
-    if sendRecords and keysSaved > 0 then SendRecordDynamic(firstPlayer, true) end
+    if firstPlayer and keysSaved > 0 then SendRecordDynamic(firstPlayer, true) end
 end
 
 function DreamMountFunctions:createMountMenuString()
