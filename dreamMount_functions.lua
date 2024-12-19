@@ -55,8 +55,6 @@ local DreamMountDefaultConfigSavedString =
     , color.MediumBlue, color.Green, DreamMountConfigPath)
 local DreamMountListString
 local DreamMountNoPreferredMountStr = Format('%sdoes not have a preferred mount set!\n' , color.Red)
-local DreamMountNoStarwindStr = Format('%sStarwind%s mounts not yet supported!\n'
-                                       , color.MediumBlue, color.Red)
 local DreamMountResetVarsString = Format('%sReset DreamMount variables for %s'
 , color.MediumBlue, color.Green)
 local DreamMountPreferredMountString = 'Select your preferred mount.'
@@ -94,18 +92,30 @@ local DreamMountPrevSpellId = 'dreamMountPreviousSpellId'
 
 local DreamMountGauntletMountDismountScript = [[
 Begin DreamMountDismount
+  short doOnce
+
+  if ( doOnce == 0 )
+
+    if ( DreamMountMount.doOnce )
+      stopScript DreamMountMount
+      set DreamMountMount.doOnce to 0
+      pcforce1stperson
+      player->loopgroup idle 2
+    endif
+
+    set doOnce to 1
+    return
+  endif
 
   enableplayerjumping
   enableplayerviewswitch
-  pcforce3rdperson
-  pcforce1stperson
-  player->playgroup idle 2
 
-  if ( DreamMountMount.wasThirdPerson == 1 )
+  if ( DreamMountMount.wasThirdPerson )
     pcforce3rdperson
   endif
 
   MessageBox "Dismount successful."
+  set doOnce to 0
   stopscript DreamMountDismount
 
 End DreamMountDismount
@@ -117,18 +127,23 @@ Begin DreamMountMount
   short wasThirdPerson
 
   if ( doOnce == 0 )
-    Messagebox "Make sure to actually draw your magic\n for gauntlet-based mounts to work properly!"
     set wasThirdPerson to ( PCGet3rdPerson )
-    set doOnce to 1
-  endif
 
-  disableplayerjumping
-  disableplayerviewswitch
-  pcforce1stperson
-  player->loopgroup idlespell 1
+    if ( player->GetSpellReadied == 0 )
+      Messagebox "Engage your mount by\ndrawing your magic!"
+      pcforce3rdperson
+      player->loopgroup idlespell 100000 1
+    endif
+
+    disableplayerjumping
+    disableplayerviewswitch
+    set doOnce to 1
+    return
+  endif
 
   if ( player->GetSpellReadied )
     player->playgroup idle 2
+    pcforce1stperson
     set doOnce to 0
     stopscript DreamMountMount
   endif
