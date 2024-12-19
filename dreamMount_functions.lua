@@ -12,6 +12,7 @@ local ContainsItem = inventoryHelper.containsItem
 local ListBox = tes3mp.ListBox
 local Load = jsonInterface.load
 local RemoveClosestItem = inventoryHelper.removeClosestItem
+local RunConsoleCommandOnPlayer = logicHandler.RunConsoleCommandOnPlayer
 local Save = jsonInterface.quicksave
 local SendBaseInfo = tes3mp.SendBaseInfo
 local SendMessage = tes3mp.SendMessage
@@ -23,11 +24,9 @@ local SlowSave = jsonInterface.save
 --TES3MP Globals
 local AddToInventory = enumerations.inventory.ADD
 local FortifyAttribute = enumerations.effects.FORTIFY_ATTRIBUTE
--- local LeftGauntletSlot = enumerations.equipment.LEFT_GAUNTLET
 local RemoveFromInventory = enumerations.inventory.REMOVE
 local RestoreFatigue = enumerations.effects.RESTORE_FATIGUE
 local Players = Players
-local ShirtSlot = enumerations.equipment.SHIRT
 local SpellRecordType = enumerations.recordType.SPELL
 
 -- Local Constants
@@ -91,6 +90,52 @@ local DreamMountPrevItemId = 'dreamMountPreviousItemId'
 local DreamMountPrevMountTypeKey = 'dreamMountPreviousMountType'
 local DreamMountPrevSpellId = 'dreamMountPreviousSpellId'
 
+-- MWScripts
+
+local DreamMountGauntletMountDismountScript = [[
+Begin DreamMountDismount
+
+  enableplayerjumping
+  enableplayerviewswitch
+  pcforce3rdperson
+  pcforce1stperson
+  player->playgroup idle 2
+
+  if ( DreamMountMount.wasThirdPerson == 1 )
+    pcforce3rdperson
+  endif
+
+  MessageBox "Dismount successful."
+  stopscript DreamMountDismount
+
+End DreamMountDismount
+]]
+
+local DreamMountGauntletMountMountScript = [[
+Begin DreamMountMount
+  short doOnce
+  short wasThirdPerson
+
+  if ( doOnce == 0 )
+    Messagebox "Make sure to actually draw your magic\n for gauntlet-based mounts to work properly!"
+    set wasThirdPerson to ( PCGet3rdPerson )
+    set doOnce to 1
+  endif
+
+  disableplayerjumping
+  disableplayerviewswitch
+  pcforce1stperson
+  player->loopgroup idlespell 1
+
+  if ( player->GetSpellReadied )
+    player->playgroup idle 2
+    set doOnce to 0
+    stopscript DreamMountMount
+  endif
+
+End DreamMountMount
+]]
+
 local DreamMountConfigDefault = {
     {
         name = 'Guar',
@@ -133,7 +178,13 @@ local DreamMountConfigDefault = {
         model = 'mountedguar2',
         speedBonus = 100,
         fatigueRestore = MountDefaultFatigueRestore * 1.25,
-    }
+    },
+    {
+        name = "Red Speeder",
+        item = 'sw_speeder1test',
+        mountType = GauntletMountType,
+        speedBonus = 200,
+    },
 }
 
 local TemplateEffects = {
@@ -336,18 +387,19 @@ function DreamMountFunctions:toggleMount(pid, player)
             SetModel(pid, '')
             SendBaseInfo(pid)
         elseif lastMountType == GauntletMountType then
-            return SendMessage(pid, DreamMountNoStarwindStr, false)
+            RunConsoleCommandOnPlayer(pid, 'startscript DreamMountDismount')
         end
 
         local prevItemId = customVariables[DreamMountPrevItemId]
         if prevItemId and ContainsItem(playerData.inventory, prevItemId) then
             player:updateEquipment {
-                SHIRT = prevItemId
+                 [MountSlotMap[lastMountType]] = prevItemId
             }
             customVariables[DreamMountPrevItemId] = nil
         end
 
         mountLog(Format(DreamMountDismountStr, player.name, lastMountType, prevItemId))
+        customVariables[DreamMountPrevItemId] = nil
         customVariables[DreamMountPrevMountTypeKey] = nil
         customVariables[DreamMountEnabledKey] = false
     end
@@ -459,10 +511,7 @@ function DreamMountFunctions.resetPlayerSpells()
     end
 end
 
-function DreamMountFunctions:initMountData()
-    self:loadMountConfig()
-    self:createMountMenuString()
-
+function DreamMountFunctions:createMountSpells()
     local spellRecords = RecordStores['spell']
     local permanentSpells = spellRecords.data.permanentRecords
 
@@ -505,6 +554,18 @@ function DreamMountFunctions:initMountData()
 
     SendRecordDynamic(firstPlayer, true)
     self.resetPlayerSpells()
+end
+
+function DreamMountFunctions:initMountData()
+    self:loadMountConfig()
+    self:createMountMenuString()
+    self:createMountSpells()
+
+    local scriptRecordStore = RecordStores['script']
+    local scriptRecords = scriptRecordStore.data.permanentRecords
+    scriptRecords['DreamMountDismount'] = { scriptText = DreamMountGauntletMountDismountScript }
+    scriptRecords['DreamMountMount'] = { scriptText = DreamMountGauntletMountMountScript }
+    scriptRecordStore:Save()
 end
 
 function DreamMountFunctions:getMountEffect(effectTable, mountIndex)
