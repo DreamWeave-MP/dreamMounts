@@ -378,6 +378,15 @@ local function resetMountSpellForPlayer(player, spellRecords)
     end
 end
 
+local function createScriptRecords()
+    local scriptRecordStore = RecordStores['script']
+    local scriptRecords = scriptRecordStore.data.permanentRecords
+    for scriptId, scriptText in pairs(MWScripts) do
+        scriptRecords[scriptId] = { scriptText = scriptText }
+    end
+    scriptRecordStore:Save()
+end
+
 function DreamMountFunctions:createKeyRecords(firstPlayer)
     local miscRecords = RecordStores['miscellaneous']
     local permanentMiscRecords = miscRecords.data.permanentRecords
@@ -651,13 +660,7 @@ function DreamMountFunctions:initMountData()
     self:createMountMenuString()
     self:createMountSpells(firstPlayer)
     self:createKeyRecords(firstPlayer)
-
-    local scriptRecordStore = RecordStores['script']
-    local scriptRecords = scriptRecordStore.data.permanentRecords
-    for scriptId, scriptText in pairs(MWScripts) do
-        scriptRecords[scriptId] = { scriptText = scriptText }
-    end
-    scriptRecordStore:Save()
+    createScriptRecords()
 end
 
 function DreamMountFunctions:getMountEffect(effectTable, mountIndex)
