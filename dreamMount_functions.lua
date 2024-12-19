@@ -27,6 +27,7 @@ local FortifyAttribute = enumerations.effects.FORTIFY_ATTRIBUTE
 local RemoveFromInventory = enumerations.inventory.REMOVE
 local RestoreFatigue = enumerations.effects.RESTORE_FATIGUE
 local Players = Players
+local MiscRecordType = enumerations.recordType.MISCELLANEOUS
 local SpellRecordType = enumerations.recordType.SPELL
 
 -- Local Constants
@@ -42,6 +43,7 @@ local MountSlotMap = {
 }
 
 -- Paths
+local DefaultKeyName = "Reins"
 local DreamMountConfigPath = 'custom/dreamMountConfig.json'
 local GuarMountFilePathStr = 'rot/anim/%s.nif'
 
@@ -179,6 +181,10 @@ local DreamMountConfigDefault = {
         model = 'mountedguar2',
         speedBonus = 80,
         fatigueRestore = MountDefaultFatigueRestore / 2,
+        key = {
+            icon = "c/tx_belt_expensive_03.dds",
+            model = "c/c_belt_expensive_3.nif",
+        }
     },
     {
         name = "Guar with Drapery (Fine)",
@@ -186,6 +192,10 @@ local DreamMountConfigDefault = {
         model = 'mountedguar2',
         speedBonus = 80,
         fatigueRestore = MountDefaultFatigueRestore * 2,
+        key = {
+            icon = "c/tx_belt_exquisite_01.dds",
+            model = "c/c_belt_exquisite_1.nif",
+        },
     },
     {
         name = "Guar with Drapery (Simple)",
@@ -193,12 +203,20 @@ local DreamMountConfigDefault = {
         model = 'mountedguar2',
         speedBonus = 100,
         fatigueRestore = MountDefaultFatigueRestore * 1.25,
+        key = {
+            icon = "c/tx_belt_exquisite_01.dds",
+            model = "c/c_belt_exquisite_1.nif",
+        },
     },
     {
         name = "Red Speeder",
         item = 'sw_speeder1test',
         mountType = GauntletMountType,
         speedBonus = 200,
+        key = {
+            name = "Red Speeder Key",
+            value = 5000,
+        },
     },
 }
 
@@ -232,12 +250,34 @@ local InventoryItemTemplate = {
     soul = '',
 }
 
+local KeyItemTemplate = {
+    value = 3000,
+    icon = "c/tx_belt_common01.tga",
+    model = "c/c_belt_common_1.nif",
+    weight = 0.0,
+    script = "",
+    keyState = nil,
+}
+
 local DreamMountFunctions = {
     MountConfig = {}
 }
 
 local function mountLog(message)
     print(Format(DreamMountLogStr, DreamMountLogPrefix, message))
+end
+
+local function getKeyTemplate(mountData)
+    local newKey = {}
+
+    for k, v in pairs(KeyItemTemplate) do newKey[k] = v end
+    for k, v in pairs(mountData.key or {}) do newKey[k] = v end
+
+    if not newKey.name then
+        newKey.name = Format("%s %s", mountData.name, DefaultKeyName)
+    end
+
+    return newKey
 end
 
 local function getTemplateEffect(templateEffect, magnitude)
@@ -335,6 +375,34 @@ local function resetMountSpellForPlayer(player, spellRecords)
             [prevMountSpell] = true,
         }
     end
+end
+
+function DreamMountFunctions:createKeyRecords(firstPlayer)
+    local miscRecords = RecordStores['miscellaneous']
+    local permanentMiscRecords = miscRecords.data.permanentRecords
+
+    local sendRecords = false
+    if firstPlayer then
+        sendRecords = true
+        ClearRecords()
+        SetRecordType(MiscRecordType)
+    end
+
+    local keysSaved = 0
+    for _, mountData in ipairs(self.mountConfig) do
+        local keyId = Format("%s_%s", mountData.name, mountData.keyName or DefaultKeyName):lower()
+        local keyRecord = getKeyTemplate(mountData)
+        permanentMiscRecords[keyId] = keyRecord
+        keysSaved = keysSaved + 1
+
+        if sendRecords then
+            AddRecordTypeToPacket(keyId, keyRecord, 'miscellaneous')
+        end
+    end
+
+    miscRecords:Save()
+
+    if sendRecords and keysSaved > 0 then SendRecordDynamic(firstPlayer, true) end
 end
 
 function DreamMountFunctions:createMountMenuString()
@@ -531,14 +599,16 @@ function DreamMountFunctions.resetPlayerSpells()
     end
 end
 
-function DreamMountFunctions:createMountSpells()
+function DreamMountFunctions:createMountSpells(firstPlayer)
     local spellRecords = RecordStores['spell']
     local permanentSpells = spellRecords.data.permanentRecords
 
-    ClearRecords()
-    SetRecordType(SpellRecordType)
-    local spellsSaved = 0
+    if firstPlayer then
+        ClearRecords()
+        SetRecordType(SpellRecordType)
+    end
 
+    local spellsSaved = 0
     for index, mountData in ipairs(self.mountConfig) do
         local mountEffects = {}
 
@@ -569,17 +639,19 @@ function DreamMountFunctions:createMountSpells()
 
     spellRecords:Save()
 
-    local firstPlayer = next(Players)
-    if spellsSaved < 1 or not firstPlayer then return end
+    if spellsSaved == 0 or not firstPlayer then return end
 
     SendRecordDynamic(firstPlayer, true)
     self.resetPlayerSpells()
 end
 
 function DreamMountFunctions:initMountData()
+    local firstPlayer = next(Players)
+
     self:loadMountConfig()
     self:createMountMenuString()
-    self:createMountSpells()
+    self:createMountSpells(firstPlayer)
+    self:createKeyRecords(firstPlayer)
 
     local scriptRecordStore = RecordStores['script']
     local scriptRecords = scriptRecordStore.data.permanentRecords
