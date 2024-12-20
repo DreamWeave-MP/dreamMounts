@@ -838,6 +838,12 @@ function DreamMountFunctions:toggleMount(player)
         customVariables[DreamMountPrevItemId] = nil
         customVariables[DreamMountPrevMountTypeKey] = nil
         customVariables[DreamMountEnabledKey] = false
+
+        -- Maybe we should add a command to disable this functionality?
+        -- Or just disable the summon?
+        if customVariables[DreamMountSummonWasEnabledKey] then
+            self:summonCreatureMount(pid)
+        end
     end
 
     if not mountIndex then return end
