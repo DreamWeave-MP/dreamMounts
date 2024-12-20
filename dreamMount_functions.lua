@@ -549,6 +549,7 @@ end
 local function resetMountSpellForPlayer(player, spellRecords)
     local prevMountSpell = player.data.customVariables[DreamMountPrevSpellId]
     if not prevMountSpell then return end
+    if not spellRecords then spellRecords = RecordStores['spell'].data.permanentRecords end
 
     player:updateSpellbook {
         [prevMountSpell] = false,
