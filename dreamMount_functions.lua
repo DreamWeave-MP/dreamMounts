@@ -214,7 +214,7 @@ local DreamMountConfigDefault = {
         speedBonus = 80,
         fatigueRestore = MountDefaultFatigueRestore / 2,
         key = {
-            icon = "c/tx_belt_expensive_03.dds",
+            icon = "c/tx_belt_expensive03.dds",
             model = "c/c_belt_expensive_3.nif",
         }
     },
@@ -226,7 +226,7 @@ local DreamMountConfigDefault = {
         speedBonus = 80,
         fatigueRestore = MountDefaultFatigueRestore * 2,
         key = {
-            icon = "c/tx_belt_exquisite_01.dds",
+            icon = "c/tx_belt_exquisite01.dds",
             model = "c/c_belt_exquisite_1.nif",
         },
     },
@@ -238,7 +238,7 @@ local DreamMountConfigDefault = {
         speedBonus = 100,
         fatigueRestore = MountDefaultFatigueRestore * 1.25,
         key = {
-            icon = "c/tx_belt_exquisite_01.dds",
+            icon = "c/tx_belt_exquisite01.dds",
             model = "c/c_belt_exquisite_1.nif",
         },
     },
