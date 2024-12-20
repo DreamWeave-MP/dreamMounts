@@ -259,6 +259,13 @@ local DreamMountConfigDefault = {
 ---@type table <string, boolean>
 local KeyRecords = {}
 
+---@alias MountIndex integer
+
+---@class MountMerchantConfig
+---@field capacity integer Number of mounts sold by this merchant
+---@field selection MountIndex[] Set of mounts which this merchant sells. Uses numeric indices of the mountConfig table. It's up to you not to screw this up.
+
+---@type table <string, MountMerchantConfig>
 local DreamMountMerchants = {
     -- Seyda Neen
     ["arrille"] = {
