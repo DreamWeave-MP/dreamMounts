@@ -314,7 +314,12 @@ local DreamMountMerchants = {
     ['galtis guvron'] = {
         capacity = 1,
         selection = { 4 }
-    }
+    },
+    -- Gnisis
+    ['fenas madach'] = {
+        capacity = 1,
+        selection = { 2 }
+    },
 }
 
 local TemplateEffects = {
