@@ -162,6 +162,7 @@ local DreamMountConfigDefault = {
         speedBonus = 70,
         fatigueRestore = MountDefaultFatigueRestore,
     },
+    -- 2
     {
         name = "Pack Guar 1",
         item = 'rot_c_guar1B_shirtC3',
@@ -169,6 +170,7 @@ local DreamMountConfigDefault = {
         speedBonus = 60,
         fatigueRestore = MountDefaultFatigueRestore * 1.5,
     },
+    -- 3
     {
         name = "Pack Guar 2",
         item = 'rot_c_guar1A_shirt0',
@@ -176,6 +178,7 @@ local DreamMountConfigDefault = {
         speedBonus = 60,
         fatigueRestore = MountDefaultFatigueRestore * 1.5,
     },
+    -- 4
     {
         name = "Redoran War Guar",
         item = 'rot_c_guar2A_shirt0_redoranwar',
@@ -187,6 +190,7 @@ local DreamMountConfigDefault = {
             model = "c/c_belt_expensive_3.nif",
         }
     },
+    -- 5
     {
         name = "Guar with Drapery (Fine)",
         item = 'rot_c_guar2B_shirt0_ordinator',
@@ -198,6 +202,7 @@ local DreamMountConfigDefault = {
             model = "c/c_belt_exquisite_1.nif",
         },
     },
+    -- 6
     {
         name = "Guar with Drapery (Simple)",
         item = 'rot_c_guar2C_shirt0_scout',
@@ -209,6 +214,7 @@ local DreamMountConfigDefault = {
             model = "c/c_belt_exquisite_1.nif",
         },
     },
+    -- 7
     {
         name = "Red Speeder",
         item = 'sw_speeder1test',
@@ -219,6 +225,68 @@ local DreamMountConfigDefault = {
             value = 5000,
         },
     },
+}
+
+--- Populated during DreamMountFunctions:createKeyRecords
+---@type table <string, boolean>
+local KeyRecords = {}
+
+local DreamMountMerchants = {
+    -- Seyda Neen
+    ["arrille"] = {
+        capacity = 3,
+        selection = { 1, 2, 3 }
+    },
+    -- Caldera
+    ["verick gemain"] = {
+        capacity = 2,
+        selection = { 3, 4 }
+    },
+    -- Khuul
+    ['thongar'] = {
+        capacity = 1,
+        selection = { 1 }
+    },
+    -- Mournhold
+    ['ten-tongues_weerhat'] = {
+        capacity = 3,
+        selection = { 4, 6, 2 }
+    },
+    -- Raven Rock
+    ['sathyn andrano'] = {
+        capacity = 3,
+        selection = { 5, 6, 3 }
+    },
+    -- Hla Oad
+    ['perien aurelie'] = {
+        capacity = 2,
+        selection = { 2, 3 }
+    },
+    -- Balmora
+    ['ra\'virr'] = {
+        capacity = 3,
+        selection = { 1, 2 }
+    },
+    -- Vivec
+    ['mevel fererus'] = {
+        capacity = 3,
+        selection = { 3, 5, 2 }
+    },
+    -- Suran
+    ['ralds oril'] = {
+        capacity = 1,
+        selection = { 3 }
+    },
+    -- Ald Velothi
+    ['sedam omalen'] = {
+        capacity = 1,
+        selection = { 1 }
+    },
+    -- Ald'ruhn
+    ['galtis guvron'] = {
+        capacity = 1,
+        selection = { 4 }
+    }
 }
 
 local TemplateEffects = {
@@ -325,6 +393,10 @@ local function canRunMountAdminCommands(player)
     return player.data.settings.staffRank >= DreamMountAdminRankRequired
 end
 
+local function getMountKeyString(mountData)
+    return Format("%s_%s", mountData.name, mountData.keyName or DefaultKeyName):lower()
+end
+
 local function assertPidProvided(pid)
     assert(pid, Format(DreamMountNoPidProvided, debug.traceback(3)))
 end
@@ -387,6 +459,60 @@ local function createScriptRecords()
     scriptRecordStore:Save()
 end
 
+function DreamMountFunctions:reloadMountMerchants(_, _, cellDescription, objects)
+    for _, actor in pairs(objects) do
+        if actor.dialogueChoiceType ~= enumerations.dialogueChoice.BARTER then return end
+        local expectedKeys = DreamMountMerchants[actor.refId]
+        if not expectedKeys then return end
+
+        local cell = LoadedCells[cellDescription]
+
+        assert(cell,
+               "Unable to read cell in reloadMountMerchants call!\n"
+               .. debug.traceback(3))
+
+        local objectData = cell.data.objectData
+        local reloadInventory = false
+        local currentMountKeys = 0
+        local currentInventory = objectData[actor.uniqueIndex].inventory
+
+        assert(objectData,
+               "Received nil objectData in reloadMountMerchants call!\n"
+               .. debug.traceback(3))
+        assert(currentInventory,
+               "Received nil currentInventory in reloadMountMerchants call!\n"
+               .. debug.traceback(3))
+
+        for _, object in pairs(currentInventory) do
+            if KeyRecords[object.refId] then
+                currentMountKeys = currentMountKeys + object.count
+            end
+        end
+
+        local keysToAdd = expectedKeys.capacity - currentMountKeys
+        if keysToAdd < 1 then return end
+
+        for _ = 1, keysToAdd do
+            local mountIndex = math.random(1, #expectedKeys.selection)
+            local mountData = self.mountConfig[mountIndex]
+            local keyId = getMountKeyString(mountData)
+            AddItem(currentInventory, keyId, 1, -1, -1, "")
+            if not reloadInventory then reloadInventory = true end
+        end
+
+        if not reloadInventory then return end
+
+        for playerId, player in pairs(Players) do
+            if player
+                and player:IsLoggedIn()
+                and player.data.location.cell == cellDescription
+            then
+                cell:LoadContainers(playerId, objectData, { actor.uniqueIndex })
+            end
+        end
+    end
+end
+
 function DreamMountFunctions:createKeyRecords(firstPlayer)
     local miscRecords = RecordStores['miscellaneous']
     local permanentMiscRecords = miscRecords.data.permanentRecords
@@ -397,10 +523,12 @@ function DreamMountFunctions:createKeyRecords(firstPlayer)
     end
 
     local keysSaved = 0
+    KeyRecords = {}
     for _, mountData in ipairs(self.mountConfig) do
-        local keyId = Format("%s_%s", mountData.name, mountData.keyName or DefaultKeyName):lower()
+        local keyId = getMountKeyString(mountData)
         local keyRecord = getKeyTemplate(mountData)
         permanentMiscRecords[keyId] = keyRecord
+        KeyRecords[keyId] = true
         keysSaved = keysSaved + 1
 
         if firstPlayer then

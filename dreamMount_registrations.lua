@@ -160,7 +160,8 @@ end
 for eventName, callbackName in pairs {
   OnServerPostInit = 'initMountData',
   OnGUIAction = 'setPreferredMount',
-  OnPlayerDisconnect = 'slowSaveOnEmptyWorld'
+  OnPlayerDisconnect = 'slowSaveOnEmptyWorld',
+  OnObjectDialogueChoice = 'reloadMountMerchants',
 } do localRegisterThing
   {
     registrar = RegisterHandler,
