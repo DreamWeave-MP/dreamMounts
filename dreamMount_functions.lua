@@ -702,7 +702,7 @@ function DreamMountFunctions:toggleMount(player)
     if not isMounted then
 
         if not mountIndex then
-            return SendMessage(pid, Format(DreamMountNoPreferredMountMessage
+            return player:Message(Format(DreamMountNoPreferredMountMessage
                                            , color.Yellow, player.name, DreamMountNoPreferredMountStr))
         end
 
@@ -871,7 +871,7 @@ function DreamMountFunctions:showPreferredMountMenu(pid, _)
     local DreamMountListString = self:createMountMenuString(player)
 
     if not DreamMountListString then
-        return SendMessage(pid, DreamMountNoMountAvailableStr)
+        return player:Message(DreamMountNoMountAvailableStr)
     end
 
     local listHeader = DreamMountPreferredMountString
@@ -974,7 +974,7 @@ function DreamMountFunctions:summonCreatureMount(pid, _)
 
     local preferredMount = customVariables[DreamMountPreferredMountKey]
     if not preferredMount then
-        return SendMessage(player.pid, "You don't have a preferred mount set!", false)
+        return player:Message("You don't have a preferred mount set!")
     end
 
     local mountData = self.mountConfig[preferredMount]
