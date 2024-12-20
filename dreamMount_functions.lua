@@ -521,6 +521,10 @@ local function despawnMountSummon(player, mountName)
     end
 end
 
+--- Place the appropriate summon at the player's location,
+--- Enabling the follow routine when doing so
+---@param player JSONPlayer
+---@param summonId string generated recordId for the mount summon
 local function spawnMountSummon(player, summonId)
     assert(player and player:IsLoggedIn(), DreamMountUnloggedPlayerSummonErr)
     local pid = player.pid
@@ -535,6 +539,8 @@ local function spawnMountSummon(player, summonId)
     customVariables[DreamMountSummonCellKey] = playerCell
 end
 
+--- Remove and if necessary, re-add the relevant mount buff for the player
+--- Used when resetting the spell records, or custom variables
 local function resetMountSpellForPlayer(player, spellRecords)
     local prevMountSpell = player.data.customVariables[DreamMountPrevSpellId]
     if not prevMountSpell then return end
@@ -550,6 +556,8 @@ local function resetMountSpellForPlayer(player, spellRecords)
     end
 end
 
+--- Resets all DreamMount state for a given player
+---@param player JSONPlayer
 local function clearCustomVariables(player)
     local customVariables = player.data.customVariables
 
@@ -655,58 +663,58 @@ local function createPetRecord(petRecordInput)
 end
 
 function DreamMountFunctions:reloadMountMerchants(_, _, cellDescription, objects)
-    for _, actor in pairs(objects) do
-        if actor.dialogueChoiceType ~= enumerations.dialogueChoice.BARTER then return end
-        local expectedKeys = DreamMountMerchants[actor.refId]
-        if not expectedKeys then return end
+    local _, actor = next(objects)
 
-        local cell = LoadedCells[cellDescription]
+    if actor.dialogueChoiceType ~= enumerations.dialogueChoice.BARTER then return end
+    local expectedKeys = DreamMountMerchants[actor.refId]
+    if not expectedKeys then return end
 
-        assert(cell, Format(DreamMountNilCellErr, Traceback(3)))
+    local cell = LoadedCells[cellDescription]
 
-        local objectData = cell.data.objectData
-        local reloadInventory = false
-        local currentMountKeys = 0
-        local currentInventory = objectData[actor.uniqueIndex].inventory
+    assert(cell, Format(DreamMountNilCellErr, Traceback(3)))
 
-        assert(objectData, Format(DreamMountNilObjectDataErr, Traceback(3)))
-        assert(currentInventory, Format(DreamMountNilInventoryErr, Traceback(3)))
+    local objectData = cell.data.objectData
+    local reloadInventory = false
+    local currentMountKeys = 0
+    local currentInventory = objectData[actor.uniqueIndex].inventory
 
-        for _, object in pairs(currentInventory) do
-            if KeyRecords[object.refId] then
-                currentMountKeys = currentMountKeys + object.count
-            end
+    assert(objectData, Format(DreamMountNilObjectDataErr, Traceback(3)))
+    assert(currentInventory, Format(DreamMountNilInventoryErr, Traceback(3)))
+
+    for _, object in pairs(currentInventory) do
+        if KeyRecords[object.refId] then
+            currentMountKeys = currentMountKeys + object.count
         end
+    end
 
-        local keysToAdd = expectedKeys.capacity - currentMountKeys
-        if keysToAdd < 1 then return end
+    local keysToAdd = expectedKeys.capacity - currentMountKeys
+    if keysToAdd < 1 then return end
 
-        for _ = 1, keysToAdd do
-            local mountIndex = math.random(1, #expectedKeys.selection)
-            local mountData = self.mountConfig[mountIndex]
-            local keyId = getMountKeyString(mountData)
-            AddItem(currentInventory, keyId, 1, -1, -1, "")
-            if not reloadInventory then reloadInventory = true end
-        end
+    for _ = 1, keysToAdd do
+        local mountIndex = math.random(1, #expectedKeys.selection)
+        local mountData = self.mountConfig[mountIndex]
+        local keyId = getMountKeyString(mountData)
+        AddItem(currentInventory, keyId, 1, -1, -1, "")
+        if not reloadInventory then reloadInventory = true end
+    end
 
-        if not reloadInventory then return end
+    if not reloadInventory then return end
 
-        for playerId, player in pairs(Players) do
-            if player
-                and player:IsLoggedIn()
-                and player.data.location.cell == cellDescription
-            then
-                cell:LoadContainers(playerId, objectData, { actor.uniqueIndex })
-            end
+    for playerId, player in pairs(Players) do
+        if player
+            and player:IsLoggedIn()
+            and player.data.location.cell == cellDescription
+        then
+            cell:LoadContainers(playerId, objectData, { actor.uniqueIndex })
         end
     end
 end
 
-function DreamMountFunctions:createKeyRecords(firstPlayer)
+function DreamMountFunctions:createKeyRecords(firstPid)
     local miscRecords = RecordStores['miscellaneous']
     local permanentMiscRecords = miscRecords.data.permanentRecords
 
-    if firstPlayer then
+    if firstPid then
         ClearRecords()
         SetRecordType(MiscRecordType)
     end
@@ -720,14 +728,14 @@ function DreamMountFunctions:createKeyRecords(firstPlayer)
         KeyRecords[keyId] = true
         keysSaved = keysSaved + 1
 
-        if firstPlayer then
+        if firstPid then
             AddRecordTypeToPacket(keyId, keyRecord, 'miscellaneous')
         end
     end
 
     miscRecords:Save()
 
-    if firstPlayer and keysSaved > 0 then SendRecordDynamic(firstPlayer, true) end
+    if firstPid and keysSaved > 0 then SendRecordDynamic(firstPid, true) end
 end
 
 ---@param player JSONPlayer
@@ -1042,17 +1050,22 @@ function DreamMountFunctions:createMountSpells(firstPlayer)
     self.resetPlayerSpells()
 end
 
+---@param player JSONPlayer
+---@return string|nil recordId for the player's mount summon, nil if the player doesn't have a preferred mount set
 function DreamMountFunctions:getPlayerMountSummon(player)
     local customVariables = player.data.customVariables
 
     local preferredMount = customVariables[DreamMountPreferredMountKey]
-    if not preferredMount then return end
+    if not preferredMount then
+        return player:Message("You do not have a preferred mount!")
+    end
 
+    local playerName = player.name
     local mountData = self.mountConfig[preferredMount]
-    assert(mountData, Format("%s's preferred mount does not exist in the mount config map!", player.name))
+    assert(mountData, Format("%s's preferred mount does not exist in the mount config map!", playerName))
     local mountRefNum = tostring( WorldInstance:GetCurrentMpNum() + 1 )
 
-    return Format("%s_%s_%s_pet", player.name, mountRefNum, mountData.name):lower()
+    return Format("%s_%s_%s_pet", playerName, mountRefNum, mountData.name):lower()
 end
 
 --- Note that currently mounts do not update properly when re-summoning
@@ -1065,9 +1078,12 @@ function DreamMountFunctions:summonCreatureMount(pid, _)
 
     local preferredMount = customVariables[DreamMountPreferredMountKey]
     if not preferredMount then return end
+
+    local petId = self:getPlayerMountSummon(player)
+    if not petId then return end
+
     local mountData = self.mountConfig[preferredMount]
     local mountName = mountData.name
-    local petId = self:getPlayerMountSummon(player)
 
     despawnMountSummon(player, mountName)
 
