@@ -10,7 +10,7 @@ local AddRecordTypeToPacket = packetBuilder.AddRecordByType
 local BuildObjectData = dataTableBuilder.BuildObjectData
 local ClearRecords = tes3mp.ClearRecords
 local ContainsItem = inventoryHelper.containsItem
-local CreateObjectAtLocation = logicHandler.CreateObjectAtLocation
+local CreateObjectAtPlayer = logicHandler.CreateObjectAtPlayer
 local DeleteObjectForEveryone = logicHandler.DeleteObjectForEveryone
 local ListBox = tes3mp.ListBox
 local Load = jsonInterface.load
@@ -21,11 +21,14 @@ local SendBaseInfo = tes3mp.SendBaseInfo
 local SendMessage = tes3mp.SendMessage
 local SetModel = tes3mp.SetModel
 local SendRecordDynamic = tes3mp.SendRecordDynamic
+local SetAIForActor = logicHandler.SetAIForActor
 local SetRecordType = tes3mp.SetRecordType
 local SlowSave = jsonInterface.save
 
 --TES3MP Globals
 local AddToInventory = enumerations.inventory.ADD
+local AIFollow = enumerations.ai.FOLLOW
+local CreatureRecordType = enumerations.recordType.CREATURE
 local FortifyAttribute = enumerations.effects.FORTIFY_ATTRIBUTE
 local RemoveFromInventory = enumerations.inventory.REMOVE
 local RestoreFatigue = enumerations.effects.RESTORE_FATIGUE
@@ -80,8 +83,14 @@ local DreamMountCreatedSpellRecordStr = 'Created spell record %s'
 local DreamMountDismountStr = '%s dismounted from mount of type: %s, replacing previously equipped item: %s'
 local DreamMountLogPrefix = 'DreamMount'
 local DreamMountMountStr = '%s mounted %s'
+local DreamMountRemovingRecordStr = "Removing %s from recordStore on behalf of %s"
 
 -- Error Strings
+local DreamMountCreatePetNoIdErr = "No petId was provided to create the pet record!\n"
+local DreamMountCreatePetNoMountNameErr = "No mountName was provided to create the pet record!\n"
+local DreamMountCreatePetNoPetDataErr = "No playerPetData was provided to create the pet record!\n"
+local DreamMountCreatePetNoPlayerErr = "No player was provided to create the pet record!\n"
+local DreamMountDespawnNoPlayerErr = "despawnMountSummon was called without providing a player!\n"
 local DreamMountInvalidSpellEffectErrorStr = 'Cannot create a spell effect with no magnitude!'
 local DreamMountMissingMountName = 'No mount name!'
 local DreamMountNilCellErr = "Unable to read cell in reloadMountMerchants call!\n%s"
@@ -91,6 +100,7 @@ local DreamMountNoInventoryErr = 'No player inventory was provided to createMoun
 local DreamMountNoPidProvided = 'No PlayerID provided!\n%s'
 local DreamMountNoPrevMountErr = 'No previous mount to remove for player %s, aborting!'
 local DreamMountShouldHaveValidMountErr = "Player shouldn't have been able to open this menu without a valid mount!"
+local DreamMountUnloggedPlayerSummonErr = "Cannot summon a mount for an unlogged player!"
 
 -- CustomVariables index keys
 local DreamMountEnabledKey = 'dreamMountIsMounted'
@@ -100,6 +110,8 @@ local DreamMountPrevMountTypeKey = 'dreamMountPreviousMountType'
 local DreamMountPrevSpellId = 'dreamMountPreviousSpellId'
 local DreamMountSummonRefNumKey = 'dreamMountSummonRefNum'
 local DreamMountSummonCellKey = 'dreamMountSummonCellDescription'
+local DreamMountSummonWasEnabledKey = 'dreamMountHadMountSummon'
+local DreamMountCurrentSummonsKey = 'dreamMountSummonsTable'
 
 -- MWScripts
 
@@ -471,8 +483,16 @@ local function unauthorizedUserMessage(pid)
     SendMessage(pid, DreamMountUnauthorizedUserMessage, false)
 end
 
-local function despawnMountSummon(player)
-    assert(player, "despawnMountSummon was called without providing a player!\n" .. debug.traceback(3))
+-- Couple cases we're not yet handling
+-- What if the cell is unloaded?
+-- What if the reference has already been deleted?
+--- Destroys the player's summoned pet, if one exists.
+--- This method also destroys the associated creature record, since current impl would
+--- otherwide be really spammy.
+---@param player JSONPlayer
+---@param mountName string
+local function despawnMountSummon(player, mountName)
+    assert(player, DreamMountDespawnNoPlayerErr .. Traceback(3))
 
     local customVariables = player.data.customVariables
     local summonRef = customVariables[DreamMountSummonRefNumKey]
@@ -480,12 +500,69 @@ local function despawnMountSummon(player)
     if not summonRef and not summonCell then return end
 
     DeleteObjectForEveryone(summonCell, summonRef)
+    LoadedCells[summonCell]:DeleteObjectData(summonRef)
+
     customVariables[DreamMountSummonRefNumKey] = nil
     customVariables[DreamMountSummonCellKey] = nil
+
+    local currentSummons = customVariables[DreamMountCurrentSummonsKey]
+    if currentSummons and currentSummons[mountName] then
+        local summonToRemove = currentSummons[mountName]
+
+        mountLog(Format(DreamMountRemovingRecordStr, summonToRemove, player.name))
+
+        local creatureRecordStore = RecordStores["creature"]
+        local creatureRecords = creatureRecordStore.data.permanentRecords
+        creatureRecords[summonToRemove] = nil
+        creatureRecordStore:Save()
+
+        currentSummons[mountName] = nil
+    end
+end
+
+local function spawnMountSummon(player, summonId)
+    assert(player and player:IsLoggedIn(), DreamMountUnloggedPlayerSummonErr)
+    local pid = player.pid
+    local playerData = player.data
+    local customVariables = playerData.customVariables
+    local playerCell = playerData.location.cell
+
+    local summonIndex = CreateObjectAtPlayer(pid, BuildObjectData(summonId), "spawn")
+    SetAIForActor(LoadedCells[playerCell], summonIndex, AIFollow, pid)
+
+    customVariables[DreamMountSummonRefNumKey] = summonIndex
+    customVariables[DreamMountSummonCellKey] = playerCell
+end
+
+local function resetMountSpellForPlayer(player, spellRecords)
+    local prevMountSpell = player.data.customVariables[DreamMountPrevSpellId]
+    if not prevMountSpell then return end
+
+    player:updateSpellbook {
+        [prevMountSpell] = false,
+    }
+
+    if spellRecords[prevMountSpell] then
+        player:updateSpellbook {
+            [prevMountSpell] = true,
+        }
+    end
 end
 
 local function clearCustomVariables(player)
     local customVariables = player.data.customVariables
+
+    -- De-summon summons
+    local preferredMount = customVariables[DreamMountPreferredMountKey]
+    local mountData = DreamMountFunctions.mountConfig[preferredMount]
+    despawnMountSummon(player, mountData.name)
+    -- Dismount if necessary
+    if customVariables[DreamMountEnabledKey] then
+        DreamMountFunctions:toggleMount(player)
+    end
+    -- Remove any applicable spells
+    resetMountSpellForPlayer(player, RecordStores['spell'].data.permanentRecords)
+
     for _, variableId in ipairs {
         DreamMountPrevMountTypeKey,
         DreamMountEnabledKey,
@@ -494,11 +571,11 @@ local function clearCustomVariables(player)
         DreamMountPrevSpellId,
         DreamMountSummonRefNumKey,
         DreamMountSummonCellKey,
+        DreamMountSummonWasEnabledKey,
+        DreamMountCurrentSummonsKey,
     } do
         customVariables[variableId] = nil
     end
-    DreamMountFunctions.resetPlayerSpells()
-    despawnMountSummon(player)
 end
 
 local function buildSpellEffectString(mountSpellRecordId, mountSpell)
@@ -518,21 +595,6 @@ local function buildSpellEffectString(mountSpellRecordId, mountSpell)
     return Concat(parts)
 end
 
-local function resetMountSpellForPlayer(player, spellRecords)
-    local prevMountSpell = player.data.customVariables[DreamMountPrevSpellId]
-    if not prevMountSpell then return end
-
-    player:updateSpellbook {
-        [prevMountSpell] = false,
-    }
-
-    if spellRecords[prevMountSpell] then
-        player:updateSpellbook {
-            [prevMountSpell] = true,
-        }
-    end
-end
-
 local function createScriptRecords()
     local scriptRecordStore = RecordStores['script']
     local scriptRecords = scriptRecordStore.data.permanentRecords
@@ -548,22 +610,22 @@ end
 
 local function createPetRecord(petRecordInput)
     local playerPetData = petRecordInput.playerPetData
-    assert(playerPetData,
-           "No playerPetData was provided to create the pet record!\n" .. debug.traceback(3))
-    local petId = petRecordInput.petId
-    assert(petId, "No petId was provided to create the pet record!\n" .. debug.traceback(3))
-    local player = petRecordInput.player
-    assert(player, "No player was provided to create the pet record!\n" .. debug.traceback(3))
-    local playerStats = petRecordInput.playerStats
-    assert(player, "No playerStats were provided to create the pet record!\n" .. debug.traceback(3))
     local mountName = petRecordInput.mountName
-    assert(petId, "No mountName was provided to create the pet record!\n" .. debug.traceback(3))
+    local petId = petRecordInput.petId
+
+    local player = petRecordInput.player
+    local playerStats = player.data.stats
+
+    assert(playerPetData, DreamMountCreatePetNoPetDataErr .. Traceback(3))
+    assert(petId, DreamMountCreatePetNoIdErr .. Traceback(3))
+    assert(player, DreamMountCreatePetNoPlayerErr .. Traceback(3))
+    assert(mountName, DreamMountCreatePetNoMountNameErr .. Traceback(3))
 
     local creatureRecordStore = RecordStores["creature"]
     local creatureRecords = creatureRecordStore.data.permanentRecords
 
     ClearRecords()
-    SetRecordType(enumerations.recordType.CREATURE)
+    SetRecordType(CreatureRecordType)
 
     local petName = Format("%s's %s", player.name, mountName)
     local petLevel = playerPetData.levelPct * playerStats.level
@@ -589,7 +651,6 @@ local function createPetRecord(petRecordInput)
     packetBuilder.AddCreatureRecord(petId, petRecord)
 
     SendRecordDynamic(player.pid, true)
-    ClearRecords()
 end
 
 function DreamMountFunctions:reloadMountMerchants(_, _, cellDescription, objects)
@@ -708,8 +769,6 @@ function DreamMountFunctions:toggleMount(player)
     local mountIndex = customVariables[DreamMountPreferredMountKey]
 
     if not isMounted then
-        despawnMountSummon(player)
-
         if not mountIndex then
             return player:Message(Format(DreamMountNoPreferredMountMessage
                                            , color.Yellow, player.name, DreamMountNoPreferredMountStr))
@@ -717,9 +776,13 @@ function DreamMountFunctions:toggleMount(player)
 
         local mount = self.mountConfig[mountIndex]
         local mountId = mount.item
+        local mountName = mount.name
         local mountType = mount.mountType or ShirtMountType
         local mountSlot = MountSlotMap[mountType]
         local mappedEquipSlot = enumerations.equipment[mountSlot]
+
+        customVariables[DreamMountSummonWasEnabledKey] = customVariables[DreamMountSummonRefNumKey] ~= nil
+        despawnMountSummon(player, mountName)
 
         local replaceItem = playerData.equipment[mappedEquipSlot]
 
@@ -740,7 +803,7 @@ function DreamMountFunctions:toggleMount(player)
             RunConsoleCommandOnPlayer(pid, 'startscript DreamMountMount')
         end
 
-        mountLog(Format(DreamMountMountStr, player.name, mount.name))
+        mountLog(Format(DreamMountMountStr, player.name, mountName))
 
         customVariables[DreamMountPrevItemId] = replaceItem
         customVariables[DreamMountPrevMountTypeKey] = mountType
@@ -972,6 +1035,19 @@ function DreamMountFunctions:createMountSpells(firstPlayer)
     self.resetPlayerSpells()
 end
 
+function DreamMountFunctions:getPlayerMountSummon(player)
+    local customVariables = player.data.customVariables
+
+    local preferredMount = customVariables[DreamMountPreferredMountKey]
+    if not preferredMount then return end
+
+    local mountData = self.mountConfig[preferredMount]
+    assert(mountData, Format("%s's preferred mount does not exist in the mount config map!", player.name))
+    local mountRefNum = tostring( WorldInstance:GetCurrentMpNum() + 1 )
+
+    return Format("%s_%s_%s_pet", player.name, mountRefNum, mountData.name):lower()
+end
+
 --- Note that currently mounts do not update properly when re-summoning
 --- What'll need to be done is to replace the summon if it already exists
 function DreamMountFunctions:summonCreatureMount(pid, _)
@@ -979,31 +1055,36 @@ function DreamMountFunctions:summonCreatureMount(pid, _)
     assert(player and player:IsLoggedIn(), "Cannot summon a mount for an unlogged player!")
     local playerData = player.data
     local customVariables = playerData.customVariables
-    local location = playerData.location
 
     local preferredMount = customVariables[DreamMountPreferredMountKey]
-    if not preferredMount then
-        return player:Message("You don't have a preferred mount set!")
+    if not preferredMount then return end
+    local mountData = self.mountConfig[preferredMount]
+    local mountName = mountData.name
+    local petId = self:getPlayerMountSummon(player)
+
+    despawnMountSummon(player, mountName)
+
+    if not customVariables[DreamMountCurrentSummonsKey] then
+        customVariables[DreamMountCurrentSummonsKey] = {}
     end
 
-    local mountData = self.mountConfig[preferredMount]
-    assert(mountData, Format("%s's preferred mount does not exist in the mount config map!", player.name))
-
-    local petId = Format("%s_%s_pet", player.name, mountData.name):lower()
+    local summonsTable = customVariables[DreamMountCurrentSummonsKey]
+    summonsTable[mountName] = petId
 
     createPetRecord {
-        mountName = mountData.name,
+        mountName = mountName,
         petId = petId,
         player = player,
         playerPetData = mountData.petData,
-        playerStats = playerData.stats
     }
 
-    despawnMountSummon(player)
+    spawnMountSummon(player, petId)
 
-    customVariables[DreamMountSummonRefNumKey] = CreateObjectAtLocation(location.cell, location,
-        BuildObjectData(petId), "spawn")
-    customVariables[DreamMountSummonCellKey] = location.cell
+    mountLog(Format("Spawned mount summon %s for player %s in %s as object %s",
+                    mountName,
+                    player.name,
+                    playerData.location.cell,
+                    customVariables[DreamMountSummonRefNumKey]))
 end
 
 function DreamMountFunctions:initMountData()
