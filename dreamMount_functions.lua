@@ -471,6 +471,19 @@ local function unauthorizedUserMessage(pid)
     SendMessage(pid, DreamMountUnauthorizedUserMessage, false)
 end
 
+local function despawnMountSummon(player)
+    assert(player, "despawnMountSummon was called without providing a player!\n" .. debug.traceback(3))
+
+    local customVariables = player.data.customVariables
+    local summonRef = customVariables[DreamMountSummonRefNumKey]
+    local summonCell = customVariables[DreamMountSummonCellKey]
+    if not summonRef and not summonCell then return end
+
+    DeleteObjectForEveryone(summonCell, summonRef)
+    customVariables[DreamMountSummonRefNumKey] = nil
+    customVariables[DreamMountSummonCellKey] = nil
+end
+
 local function clearCustomVariables(player)
     local customVariables = player.data.customVariables
     for _, variableId in ipairs {
@@ -485,6 +498,7 @@ local function clearCustomVariables(player)
         customVariables[variableId] = nil
     end
     DreamMountFunctions.resetPlayerSpells()
+    despawnMountSummon(player)
 end
 
 local function buildSpellEffectString(mountSpellRecordId, mountSpell)
@@ -576,19 +590,6 @@ local function createPetRecord(petRecordInput)
 
     SendRecordDynamic(player.pid, true)
     ClearRecords()
-end
-
-local function despawnMountSummon(player)
-    assert(player, "despawnMountSummon was called without providing a player!\n" .. debug.traceback(3))
-
-    local customVariables = player.data.customVariables
-    local summonRef = customVariables[DreamMountSummonRefNumKey]
-    local summonCell = customVariables[DreamMountSummonCellKey]
-    if not summonRef and not summonCell then return end
-
-    DeleteObjectForEveryone(summonCell, summonRef)
-    customVariables[DreamMountSummonRefNumKey] = nil
-    customVariables[DreamMountSummonCellKey] = nil
 end
 
 function DreamMountFunctions:reloadMountMerchants(_, _, cellDescription, objects)
