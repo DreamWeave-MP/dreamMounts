@@ -165,6 +165,7 @@ for eventName, callbackName in pairs {
   OnGUIAction = 'setPreferredMount',
   OnPlayerDisconnect = 'slowSaveOnEmptyWorld',
   OnObjectDialogueChoice = 'reloadMountMerchants',
+  OnActorCellChange = 'trackPlayerMountCell',
 } do localRegisterThing
   {
     registrar = RegisterHandler,

@@ -99,6 +99,7 @@ local DreamMountPrevItemId = 'dreamMountPreviousItemId'
 local DreamMountPrevMountTypeKey = 'dreamMountPreviousMountType'
 local DreamMountPrevSpellId = 'dreamMountPreviousSpellId'
 local DreamMountSummonRefNumKey = 'dreamMountSummonRefNum'
+local DreamMountSummonCellKey = 'dreamMountSummonCellDescription'
 
 -- MWScripts
 
@@ -578,10 +579,12 @@ local function despawnMountSummon(player)
 
     local customVariables = player.data.customVariables
     local summonRef = customVariables[DreamMountSummonRefNumKey]
-    if not summonRef then return end
+    local summonCell = customVariables[DreamMountSummonCellKey]
+    if not summonRef and not summonCell then return end
 
-    DeleteObjectForEveryone(player.data.location.cell, summonRef)
+    DeleteObjectForEveryone(summonCell, summonRef)
     customVariables[DreamMountSummonRefNumKey] = nil
+    customVariables[DreamMountSummonCellKey] = nil
 end
 
 function DreamMountFunctions:reloadMountMerchants(_, _, cellDescription, objects)
@@ -990,14 +993,11 @@ function DreamMountFunctions:summonCreatureMount(pid, _)
         playerStats = playerData.stats
     }
 
-    --- For testing puposes we currently just replace the mount
-    --- But ideally instead we shuold just destroy the mount reference when it dies
-    --- This also doesn't work right now, because it only stores the cell in which the object originally spawned!
-    --- We'll have to steal some code from fixfollowai for this to work...
     despawnMountSummon(player)
 
     customVariables[DreamMountSummonRefNumKey] = CreateObjectAtLocation(location.cell, location,
         BuildObjectData(petId), "spawn")
+    customVariables[DreamMountSummonCellKey] = location.cell
 end
 
 function DreamMountFunctions:initMountData()
@@ -1030,6 +1030,21 @@ end
 ---@return string
 function DreamMountFunctions:getMountSpellNameString(mountIndex)
     return Format(DreamMountSpellNameTemplate, self.mountConfig[mountIndex].name)
+end
+
+function DreamMountFunctions:trackPlayerMountCell(_, pid, _)
+    local player = Players[pid]
+    if not player or not player:IsLoggedIn() then return end
+    local customVariables = player.data.customVariables
+
+    tes3mp.ReadReceivedActorList()
+
+    for actorIndex = 0, tes3mp.GetActorListSize() - 1 do
+        local uniqueIndex = tes3mp.GetActorRefNum(actorIndex) .. "-" .. tes3mp.GetActorMpNum(actorIndex)
+        if uniqueIndex == customVariables[DreamMountSummonRefNumKey] then
+            player.data.customVariables[DreamMountSummonCellKey] = tes3mp.GetActorCell(actorIndex)
+        end
+    end
 end
 
 return DreamMountFunctions
