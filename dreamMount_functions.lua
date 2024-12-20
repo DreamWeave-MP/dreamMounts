@@ -62,7 +62,7 @@ local DreamMountDefaultConfigSavedString =
     Format('%sSaved default mount config to %sdata/%s\n'
     , color.MediumBlue, color.Green, DreamMountConfigPath)
 local DreamMountNoPreferredMountStr = Format('%sdoes not have a preferred mount set!\n' , color.Red)
-local DreamMountNoMountAvailableStr = Format('%sYou do not have any mounts available! Seek one out in the world . . .', color.Maroon)
+local DreamMountNoMountAvailableStr = Format('%sYou do not have any mounts available! Seek one out in the world . . .\n', color.Maroon)
 local DreamMountResetVarsString = Format('%sReset DreamMount variables for %s'
 , color.MediumBlue, color.Green)
 local DreamMountPreferredMountString = 'Select your preferred mount.'
