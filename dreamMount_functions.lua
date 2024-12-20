@@ -63,6 +63,7 @@ local DreamMountPreferredMountString = 'Select your preferred mount.'
 local DreamMountUnauthorizedUserMessage =
     Format('%sYou are not authorized to run %sdreamMount %sadmin commands!\n'
     , color.Red, color.MediumBlue, color.Red)
+local DreamMountDefaultListString = "Cancel"
 
 -- Patterns
 local DreamMountNoPreferredMountMessage = '%s%s %s'
@@ -86,6 +87,7 @@ local DreamMountNilInventoryErr = "Received nil currentInventory in reloadMountM
 local DreamMountNoInventoryErr = 'No player inventory was provided to createMountMenuString!\n%s'
 local DreamMountNoPidProvided = 'No PlayerID provided!\n%s'
 local DreamMountNoPrevMountErr = 'No previous mount to remove for player %s, aborting!'
+local DreamMountShouldHaveValidMountErr = "Player shouldn't have been able to open this menu without a valid mount!"
 
 -- CustomVariables index keys
 local DreamMountEnabledKey = 'dreamMountIsMounted'
@@ -579,12 +581,35 @@ function DreamMountFunctions:createKeyRecords(firstPlayer)
     if firstPlayer and keysSaved > 0 then SendRecordDynamic(firstPlayer, true) end
 end
 
-function DreamMountFunctions:createMountMenuString()
-    DreamMountListString = ''
-    for _, MountData in ipairs(self.mountConfig) do
-        DreamMountListString = Format(DreamMountMenuItemPattern, DreamMountListString,
-                                      MountData.name or DreamMountMissingMountName)
+---@param player JSONPlayer
+---@return string|nil UI Display output for the player's currently available mounts. nil if none are currently available
+function DreamMountFunctions:createMountMenuString(player)
+    local DreamMountListString = DreamMountDefaultListString
+    local playerInventory = player.data.inventory
+
+    assert(playerInventory, Format(DreamMountNoInventoryErr, debug.traceback(3)))
+
+    local possessedKeys = {}
+
+    for _, item in ipairs(playerInventory) do
+        local itemId = item.refId
+        if KeyRecords[itemId] then possessedKeys[itemId] = true end
     end
+
+    tableHelper.print(KeyRecords)
+    tableHelper.print(possessedKeys)
+
+    for _, MountData in ipairs(self.mountConfig) do
+        local keyId = getMountKeyString(MountData)
+        if possessedKeys[keyId] then
+            DreamMountListString = Format(DreamMountMenuItemPattern, DreamMountListString,
+                MountData.name or DreamMountMissingMountName)
+        end
+    end
+
+    if DreamMountListString == DreamMountDefaultListString then return end
+
+    return DreamMountListString
 end
 
 function DreamMountFunctions:toggleMount(pid, player)
@@ -727,7 +752,28 @@ function DreamMountFunctions:setPreferredMount(_, pid, idGui, data)
 
     local selection = tonumber(data)
 
-    if not selection or selection < 1 or selection > #self.mountConfig then return end
+    if not selection or selection == 0 or selection > #self.mountConfig then return end
+
+    local playerListString = self:createMountMenuString(player)
+    assert(playerListString, DreamMountShouldHaveValidMountErr)
+
+    local lineIndex = 0
+    local selectedMountName
+    for line in playerListString:gmatch("[^\n]+") do
+        if lineIndex == selection then
+            selectedMountName = line
+            break
+        end
+        lineIndex = lineIndex + 1
+    end
+
+    local selectedMountIndex
+    for mountIndex, mountData in ipairs(self.mountConfig) do
+        if mountData.name == selectedMountName then
+            selectedMountIndex = mountIndex
+            break
+        end
+    end
 
     local customVariables = player.data.customVariables
 
@@ -735,16 +781,32 @@ function DreamMountFunctions:setPreferredMount(_, pid, idGui, data)
         self:toggleMount(pid, player)
     end
 
-    customVariables[DreamMountPreferredMountKey] = selection
+    customVariables[DreamMountPreferredMountKey] = selectedMountIndex
 end
 
-function DreamMountFunctions.showPreferredMountMenu(_, pid)
-    return ListBox(pid, DreamMountsGUIID
-                   , DreamMountPreferredMountString, DreamMountListString)
+function DreamMountFunctions:showPreferredMountMenu(pid, _)
+    local player = Players[pid]
+    if not player or not player:IsLoggedIn() then return end
+
+    local DreamMountListString = self:createMountMenuString(player)
+
+    if not DreamMountListString then
+        return SendMessage(pid, DreamMountNoMountAvailableStr)
+    end
+
+    local listHeader = DreamMountPreferredMountString
+
+    local currentPreferredMount = player.data.customVariables[DreamMountPreferredMountKey]
+    if currentPreferredMount then
+        local mountName = self.mountConfig[currentPreferredMount].name
+        listHeader = Format("%s Your current one is: %s", listHeader, mountName)
+    end
+
+    ListBox(pid, DreamMountsGUIID , listHeader, DreamMountListString)
 end
 
 function DreamMountFunctions:slowSaveOnEmptyWorld()
-    if #Players ~= 0 then return end
+    if next(Players) then return end
     SlowSave(DreamMountConfigPath, self.mountConfig)
 end
 
@@ -825,7 +887,6 @@ function DreamMountFunctions:initMountData()
     local firstPlayer = next(Players)
 
     self:loadMountConfig()
-    self:createMountMenuString()
     self:createMountSpells(firstPlayer)
     self:createKeyRecords(firstPlayer)
     createScriptRecords()
