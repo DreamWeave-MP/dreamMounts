@@ -55,8 +55,8 @@ local DreamMountConfigReloadedMessage =
 local DreamMountDefaultConfigSavedString =
     Format('%sSaved default mount config to %sdata/%s\n'
     , color.MediumBlue, color.Green, DreamMountConfigPath)
-local DreamMountListString
 local DreamMountNoPreferredMountStr = Format('%sdoes not have a preferred mount set!\n' , color.Red)
+local DreamMountNoMountAvailableStr = Format('%sYou do not have any mounts available! Seek one out in the world . . .', color.Maroon)
 local DreamMountResetVarsString = Format('%sReset DreamMount variables for %s'
 , color.MediumBlue, color.Green)
 local DreamMountPreferredMountString = 'Select your preferred mount.'
@@ -80,6 +80,10 @@ local DreamMountMountStr = '%s mounted %s'
 -- Error Strings
 local DreamMountInvalidSpellEffectErrorStr = 'Cannot create a spell effect with no magnitude!'
 local DreamMountMissingMountName = 'No mount name!'
+local DreamMountNilCellErr = "Unable to read cell in reloadMountMerchants call!\n%s"
+local DreamMountNilObjectDataErr = "Received nil objectData in reloadMountMerchantsCall!\n%s"
+local DreamMountNilInventoryErr = "Received nil currentInventory in reloadMountMerchantsCall!\n%s"
+local DreamMountNoInventoryErr = 'No player inventory was provided to createMountMenuString!\n%s'
 local DreamMountNoPidProvided = 'No PlayerID provided!\n%s'
 local DreamMountNoPrevMountErr = 'No previous mount to remove for player %s, aborting!'
 
@@ -507,21 +511,15 @@ function DreamMountFunctions:reloadMountMerchants(_, _, cellDescription, objects
 
         local cell = LoadedCells[cellDescription]
 
-        assert(cell,
-               "Unable to read cell in reloadMountMerchants call!\n"
-               .. debug.traceback(3))
+        assert(cell, Format(DreamMountNilCellErr, debug.traceback(3)))
 
         local objectData = cell.data.objectData
         local reloadInventory = false
         local currentMountKeys = 0
         local currentInventory = objectData[actor.uniqueIndex].inventory
 
-        assert(objectData,
-               "Received nil objectData in reloadMountMerchants call!\n"
-               .. debug.traceback(3))
-        assert(currentInventory,
-               "Received nil currentInventory in reloadMountMerchants call!\n"
-               .. debug.traceback(3))
+        assert(objectData, Format(DreamMountNilObjectDataErr, debug.traceback(3)))
+        assert(currentInventory, Format(DreamMountNilInventoryErr, debug.traceback(3)))
 
         for _, object in pairs(currentInventory) do
             if KeyRecords[object.refId] then
