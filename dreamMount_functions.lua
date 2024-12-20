@@ -612,7 +612,8 @@ function DreamMountFunctions:createMountMenuString(player)
     return DreamMountListString
 end
 
-function DreamMountFunctions:toggleMount(pid, player)
+function DreamMountFunctions:toggleMount(player)
+    local pid = player.pid
     local playerData = player.data
     local customVariables = playerData.customVariables
     local charData = playerData.character
@@ -778,7 +779,7 @@ function DreamMountFunctions:setPreferredMount(_, pid, idGui, data)
     local customVariables = player.data.customVariables
 
     if customVariables[DreamMountEnabledKey] then
-        self:toggleMount(pid, player)
+        self:toggleMount(player)
     end
 
     customVariables[DreamMountPreferredMountKey] = selectedMountIndex
@@ -813,7 +814,7 @@ end
 function DreamMountFunctions:toggleMountCommand(pid)
     local player = Players[pid]
     if not player or not player:IsLoggedIn() then return end
-    self:toggleMount(pid, player)
+    self:toggleMount(player)
 end
 
 function DreamMountFunctions.defaultMountConfig(_, pid)
