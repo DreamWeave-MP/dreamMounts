@@ -476,11 +476,15 @@ local function clearCustomVariables(player)
     for _, variableId in ipairs {
         DreamMountPrevMountTypeKey,
         DreamMountEnabledKey,
-        DreamMountPrevMountTypeKey,
         DreamMountPreferredMountKey,
+        DreamMountPrevItemId,
+        DreamMountPrevSpellId,
+        DreamMountSummonRefNumKey,
+        DreamMountSummonCellKey,
     } do
         customVariables[variableId] = nil
     end
+    DreamMountFunctions.resetPlayerSpells()
 end
 
 local function buildSpellEffectString(mountSpellRecordId, mountSpell)
