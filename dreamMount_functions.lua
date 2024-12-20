@@ -708,6 +708,7 @@ function DreamMountFunctions:toggleMount(player)
     local mountIndex = customVariables[DreamMountPreferredMountKey]
 
     if not isMounted then
+        despawnMountSummon(player)
 
         if not mountIndex then
             return player:Message(Format(DreamMountNoPreferredMountMessage
