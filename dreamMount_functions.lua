@@ -491,14 +491,19 @@ end
 --- This method also destroys the associated creature record, since current impl would
 --- otherwide be really spammy.
 ---@param player JSONPlayer
----@param mountName string
-local function despawnMountSummon(player, mountName)
+local function despawnMountSummon(player)
     assert(player, DreamMountDespawnNoPlayerErr .. Traceback(3))
 
     local customVariables = player.data.customVariables
     local summonRef = customVariables[DreamMountSummonRefNumKey]
     local summonCell = customVariables[DreamMountSummonCellKey]
     if not summonRef and not summonCell then return end
+
+    local preferredMount = customVariables[DreamMountPreferredMountKey]
+    local mountData = DreamMountFunctions.mountConfig[preferredMount]
+    if not mountData or not preferredMount then return end
+
+    local mountName = mountData.name
 
     DeleteObjectForEveryone(summonCell, summonRef)
     LoadedCells[summonCell]:DeleteObjectData(summonRef)
@@ -562,15 +567,13 @@ local function clearCustomVariables(player)
     local customVariables = player.data.customVariables
 
     -- De-summon summons
-    local preferredMount = customVariables[DreamMountPreferredMountKey]
-    local mountData = DreamMountFunctions.mountConfig[preferredMount]
-    despawnMountSummon(player, mountData.name)
+    despawnMountSummon(player)
     -- Dismount if necessary
     if customVariables[DreamMountEnabledKey] then
         DreamMountFunctions:toggleMount(player)
     end
     -- Remove any applicable spells
-    resetMountSpellForPlayer(player, RecordStores['spell'].data.permanentRecords)
+    resetMountSpellForPlayer(player)
 
     for _, variableId in ipairs {
         DreamMountPrevMountTypeKey,
@@ -791,7 +794,7 @@ function DreamMountFunctions:toggleMount(player)
         local mappedEquipSlot = enumerations.equipment[mountSlot]
 
         customVariables[DreamMountSummonWasEnabledKey] = customVariables[DreamMountSummonRefNumKey] ~= nil
-        despawnMountSummon(player, mountName)
+        despawnMountSummon(player)
 
         local replaceItem = playerData.equipment[mappedEquipSlot]
 
@@ -1085,7 +1088,7 @@ function DreamMountFunctions:summonCreatureMount(pid, _)
     local mountData = self.mountConfig[preferredMount]
     local mountName = mountData.name
 
-    despawnMountSummon(player, mountName)
+    despawnMountSummon(player)
 
     if not customVariables[DreamMountCurrentSummonsKey] then
         customVariables[DreamMountCurrentSummonsKey] = {}
