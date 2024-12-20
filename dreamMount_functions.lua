@@ -195,6 +195,20 @@ local DreamMountConfigDefault = {
         model = 'mountedguar2',
         speedBonus = 70,
         fatigueRestore = MountDefaultFatigueRestore,
+        petData = {
+            baseId = "guar",
+            levelPct = 0.50,
+            healthPct = 0.50,
+            magickaPct = 0.50,
+            fatiguePct = 0.50,
+            damageChop = 10,
+            damageSlash = 10,
+            damageThrust = 10,
+            damagePerLevelPct = 0.03,
+            chopMinDmgPct = 0.40,
+            slashMinDmgPct = 0.40,
+            thrustMinDmgPct = 0.40,
+        }
     },
     -- 2
     {
@@ -503,6 +517,10 @@ local function createScriptRecords()
         scriptRecords[scriptId] = { scriptText = scriptText }
     end
     scriptRecordStore:Save()
+end
+
+local function round(number)
+    return math.floor(number + 0.5)
 end
 
 function DreamMountFunctions:reloadMountMerchants(_, _, cellDescription, objects)
@@ -882,6 +900,55 @@ function DreamMountFunctions:createMountSpells(firstPlayer)
 
     SendRecordDynamic(firstPlayer, true)
     self.resetPlayerSpells()
+end
+
+--- Note that currently mounts do not update properly when re-summoning
+--- What'll need to be done is to replace the summon if it already exists
+function DreamMountFunctions:summonCreatureMount(pid, _)
+    local player = Players[pid]
+    if not player or not player:IsLoggedIn() then return end
+    local playerData = player.data
+
+    local creatureRecordStore = RecordStores["creature"]
+    local creatureRecords = creatureRecordStore.data.permanentRecords
+
+    local preferredMount = player.data.customVariables[DreamMountPreferredMountKey]
+    if not preferredMount then return end
+
+    local mountData = self.mountConfig[preferredMount]
+    if not mountData then return end
+
+    local playerPetData = mountData.petData
+    if not playerPetData then return end
+
+    local playerStats = playerData.stats
+
+    local petId = Format("%s_%s_pet", player.name, mountData.name):lower()
+    local petName = Format("%s's %s", player.name, mountData.name)
+    local petLevel = playerPetData.levelPct * playerStats.level
+    local chopMax = round(playerPetData.damageChop * ( 1 + (playerPetData.damagePerLevelPct * petLevel) ))
+    local slashMax = round(playerPetData.damageSlash * ( 1 + (playerPetData.damagePerLevelPct * petLevel) ))
+    local thrustMax = round(playerPetData.damageThrust * ( 1 + (playerPetData.damagePerLevelPct * petLevel) ))
+    local petRecord = {
+        name = petName,
+        baseId = playerPetData.baseId,
+        health = round(playerPetData.healthPct * playerStats.healthBase),
+        magicka = round(playerPetData.magickaPct * playerStats.magickaBase),
+        fatigue = round(playerPetData.fatiguePct * playerStats.fatigueBase),
+        level = round(petLevel),
+        damageChop = { min = (chopMax * playerPetData.chopMinDmgPct), max = chopMax },
+        damageSlash = { min = (slashMax * playerPetData.slashMinDmgPct), max = slashMax },
+        damageThrust = { min = (thrustMax * playerPetData.thrustMinDmgPct), max = thrustMax },
+    }
+
+    creatureRecords[petId] = petRecord
+    creatureRecordStore:Save()
+
+    ClearRecords()
+    SetRecordType(enumerations.recordType.CREATURE)
+    AddRecordTypeToPacket(petId, petRecord, 'creature')
+
+    SendRecordDynamic(player.pid, true)
 end
 
 function DreamMountFunctions:initMountData()

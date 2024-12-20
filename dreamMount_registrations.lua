@@ -130,12 +130,14 @@ end
 ---| "'reloadConfig'"
 ---| "'defaultConfig'"
 ---| "'clearPlayerVars'"
+---| "'summon'"
 
 ---@alias CommandId
 ---| "'showPreferredMountMenu'"
 ---| "'reloadMountConfig'"
 ---| "'defaultMountConfig'"
 ---| "'clearCustomVariablesCommand'"
+---| "'summonCreatureMount'"
 
 ---@type table <Subcommand, CommandId>
 local mountFuncs = {
@@ -143,6 +145,7 @@ local mountFuncs = {
   reloadConfig = 'reloadMountConfig',
   defaultConfig = 'defaultMountConfig',
   clearPlayerVars = 'clearCustomVariablesCommand',
+  summon = "summonCreatureMount",
 }
 
 ---@param pid PlayerId
