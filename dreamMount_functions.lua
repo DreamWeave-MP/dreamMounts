@@ -3,6 +3,7 @@
 -- STL Functions
 local Concat = table.concat
 local Format = string.format
+local Traceback = debug.traceback
 
 -- TES3MP Functions
 local AddItem = inventoryHelper.addItem
@@ -475,7 +476,7 @@ local function getMountKeyString(mountData)
 end
 
 local function assertPidProvided(pid)
-    assert(pid, Format(DreamMountNoPidProvided, debug.traceback(3)))
+    assert(pid, Format(DreamMountNoPidProvided, Traceback(3)))
 end
 
 local function unauthorizedUserMessage(pid)
@@ -661,15 +662,15 @@ function DreamMountFunctions:reloadMountMerchants(_, _, cellDescription, objects
 
         local cell = LoadedCells[cellDescription]
 
-        assert(cell, Format(DreamMountNilCellErr, debug.traceback(3)))
+        assert(cell, Format(DreamMountNilCellErr, Traceback(3)))
 
         local objectData = cell.data.objectData
         local reloadInventory = false
         local currentMountKeys = 0
         local currentInventory = objectData[actor.uniqueIndex].inventory
 
-        assert(objectData, Format(DreamMountNilObjectDataErr, debug.traceback(3)))
-        assert(currentInventory, Format(DreamMountNilInventoryErr, debug.traceback(3)))
+        assert(objectData, Format(DreamMountNilObjectDataErr, Traceback(3)))
+        assert(currentInventory, Format(DreamMountNilInventoryErr, Traceback(3)))
 
         for _, object in pairs(currentInventory) do
             if KeyRecords[object.refId] then
@@ -735,7 +736,7 @@ function DreamMountFunctions:createMountMenuString(player)
     local DreamMountListString = DreamMountDefaultListString
     local playerInventory = player.data.inventory
 
-    assert(playerInventory, Format(DreamMountNoInventoryErr, debug.traceback(3)))
+    assert(playerInventory, Format(DreamMountNoInventoryErr, Traceback(3)))
 
     local possessedKeys = {}
 
@@ -872,7 +873,7 @@ function DreamMountFunctions:loadMountConfig()
         Save(DreamMountConfigPath, self.mountConfig)
     end
 
-    assert(#self.mountConfig >= 1, 'Empty config found on reload!\n' .. debug.traceback(3))
+    assert(#self.mountConfig >= 1, 'Empty config found on reload!\n' .. Traceback(3))
 end
 
 function DreamMountFunctions.clearCustomVariablesCommand(_, pid, cmd)
