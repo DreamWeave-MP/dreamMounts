@@ -7,8 +7,11 @@ local Format = string.format
 -- TES3MP Functions
 local AddItem = inventoryHelper.addItem
 local AddRecordTypeToPacket = packetBuilder.AddRecordByType
+local BuildObjectData = dataTableBuilder.BuildObjectData
 local ClearRecords = tes3mp.ClearRecords
 local ContainsItem = inventoryHelper.containsItem
+local CreateObjectAtLocation = logicHandler.CreateObjectAtLocation
+local DeleteObjectForEveryone = logicHandler.DeleteObjectForEveryone
 local ListBox = tes3mp.ListBox
 local Load = jsonInterface.load
 local RemoveClosestItem = inventoryHelper.removeClosestItem
@@ -95,6 +98,7 @@ local DreamMountPreferredMountKey = 'dreamMountPreferredMount'
 local DreamMountPrevItemId = 'dreamMountPreviousItemId'
 local DreamMountPrevMountTypeKey = 'dreamMountPreviousMountType'
 local DreamMountPrevSpellId = 'dreamMountPreviousSpellId'
+local DreamMountSummonRefNumKey = 'dreamMountSummonRefNum'
 
 -- MWScripts
 
@@ -523,6 +527,63 @@ local function round(number)
     return math.floor(number + 0.5)
 end
 
+local function createPetRecord(petRecordInput)
+    local playerPetData = petRecordInput.playerPetData
+    assert(playerPetData,
+           "No playerPetData was provided to create the pet record!\n" .. debug.traceback(3))
+    local petId = petRecordInput.petId
+    assert(petId, "No petId was provided to create the pet record!\n" .. debug.traceback(3))
+    local player = petRecordInput.player
+    assert(player, "No player was provided to create the pet record!\n" .. debug.traceback(3))
+    local playerStats = petRecordInput.playerStats
+    assert(player, "No playerStats were provided to create the pet record!\n" .. debug.traceback(3))
+    local mountName = petRecordInput.mountName
+    assert(petId, "No mountName was provided to create the pet record!\n" .. debug.traceback(3))
+
+    local creatureRecordStore = RecordStores["creature"]
+    local creatureRecords = creatureRecordStore.data.permanentRecords
+
+    ClearRecords()
+    SetRecordType(enumerations.recordType.CREATURE)
+
+    local petName = Format("%s's %s", player.name, mountName)
+    local petLevel = playerPetData.levelPct * playerStats.level
+    local chopMax = round(playerPetData.damageChop * (1 + (playerPetData.damagePerLevelPct * petLevel)))
+    local slashMax = round(playerPetData.damageSlash * (1 + (playerPetData.damagePerLevelPct * petLevel)))
+    local thrustMax = round(playerPetData.damageThrust * (1 + (playerPetData.damagePerLevelPct * petLevel)))
+
+    local petRecord = {
+        name = petName,
+        baseId = playerPetData.baseId,
+        health = round(playerPetData.healthPct * playerStats.healthBase),
+        magicka = round(playerPetData.magickaPct * playerStats.magickaBase),
+        fatigue = round(playerPetData.fatiguePct * playerStats.fatigueBase),
+        level = round(petLevel),
+        damageChop = { min = (chopMax * playerPetData.chopMinDmgPct), max = chopMax },
+        damageSlash = { min = (slashMax * playerPetData.slashMinDmgPct), max = slashMax },
+        damageThrust = { min = (thrustMax * playerPetData.thrustMinDmgPct), max = thrustMax },
+    }
+
+    creatureRecords[petId] = petRecord
+    creatureRecordStore:Save()
+
+    packetBuilder.AddCreatureRecord(petId, petRecord)
+
+    SendRecordDynamic(player.pid, true)
+    ClearRecords()
+end
+
+local function despawnMountSummon(player)
+    assert(player, "despawnMountSummon was called without providing a player!\n" .. debug.traceback(3))
+
+    local customVariables = player.data.customVariables
+    local summonRef = customVariables[DreamMountSummonRefNumKey]
+    if not summonRef then return end
+
+    DeleteObjectForEveryone(player.data.location.cell, summonRef)
+    customVariables[DreamMountSummonRefNumKey] = nil
+end
+
 function DreamMountFunctions:reloadMountMerchants(_, _, cellDescription, objects)
     for _, actor in pairs(objects) do
         if actor.dialogueChoiceType ~= enumerations.dialogueChoice.BARTER then return end
@@ -906,49 +967,37 @@ end
 --- What'll need to be done is to replace the summon if it already exists
 function DreamMountFunctions:summonCreatureMount(pid, _)
     local player = Players[pid]
-    if not player or not player:IsLoggedIn() then return end
+    assert(player and player:IsLoggedIn(), "Cannot summon a mount for an unlogged player!")
     local playerData = player.data
+    local customVariables = playerData.customVariables
+    local location = playerData.location
 
-    local creatureRecordStore = RecordStores["creature"]
-    local creatureRecords = creatureRecordStore.data.permanentRecords
-
-    local preferredMount = player.data.customVariables[DreamMountPreferredMountKey]
-    if not preferredMount then return end
+    local preferredMount = customVariables[DreamMountPreferredMountKey]
+    if not preferredMount then
+        return SendMessage(player.pid, "You don't have a preferred mount set!", false)
+    end
 
     local mountData = self.mountConfig[preferredMount]
-    if not mountData then return end
-
-    local playerPetData = mountData.petData
-    if not playerPetData then return end
-
-    local playerStats = playerData.stats
+    assert(mountData, Format("%s's preferred mount does not exist in the mount config map!", player.name))
 
     local petId = Format("%s_%s_pet", player.name, mountData.name):lower()
-    local petName = Format("%s's %s", player.name, mountData.name)
-    local petLevel = playerPetData.levelPct * playerStats.level
-    local chopMax = round(playerPetData.damageChop * ( 1 + (playerPetData.damagePerLevelPct * petLevel) ))
-    local slashMax = round(playerPetData.damageSlash * ( 1 + (playerPetData.damagePerLevelPct * petLevel) ))
-    local thrustMax = round(playerPetData.damageThrust * ( 1 + (playerPetData.damagePerLevelPct * petLevel) ))
-    local petRecord = {
-        name = petName,
-        baseId = playerPetData.baseId,
-        health = round(playerPetData.healthPct * playerStats.healthBase),
-        magicka = round(playerPetData.magickaPct * playerStats.magickaBase),
-        fatigue = round(playerPetData.fatiguePct * playerStats.fatigueBase),
-        level = round(petLevel),
-        damageChop = { min = (chopMax * playerPetData.chopMinDmgPct), max = chopMax },
-        damageSlash = { min = (slashMax * playerPetData.slashMinDmgPct), max = slashMax },
-        damageThrust = { min = (thrustMax * playerPetData.thrustMinDmgPct), max = thrustMax },
+
+    createPetRecord {
+        mountName = mountData.name,
+        petId = petId,
+        player = player,
+        playerPetData = mountData.petData,
+        playerStats = playerData.stats
     }
 
-    creatureRecords[petId] = petRecord
-    creatureRecordStore:Save()
+    --- For testing puposes we currently just replace the mount
+    --- But ideally instead we shuold just destroy the mount reference when it dies
+    --- This also doesn't work right now, because it only stores the cell in which the object originally spawned!
+    --- We'll have to steal some code from fixfollowai for this to work...
+    despawnMountSummon(player)
 
-    ClearRecords()
-    SetRecordType(enumerations.recordType.CREATURE)
-    AddRecordTypeToPacket(petId, petRecord, 'creature')
-
-    SendRecordDynamic(player.pid, true)
+    customVariables[DreamMountSummonRefNumKey] = CreateObjectAtLocation(location.cell, location,
+        BuildObjectData(petId), "spawn")
 end
 
 function DreamMountFunctions:initMountData()
