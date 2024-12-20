@@ -152,9 +152,37 @@ Begin DreamMountMount
 
 End DreamMountMount
 ]],
+    DreamMountForceThirdPerson = [[
+Begin DreamMountForceThirdPerson
+  short wasThirdPerson
+  set wasThirdPerson to ( PCGet3rdPerson )
+
+  PCForce3rdPerson
+
+  disablePlayerViewSwitch
+
+  stopScript DreamMountForceThirdPerson
+
+End DreamMountForceThirdPerson
+]],
+    DreamMountDisableForceThirdPerson = [[
+Begin DreamMountDisableForceThirdPerson
+
+  if ( DreamMountForceThirdPerson.wasThirdPerson )
+    pcforce3rdperson
+  else
+    pcforce1stperson
+  endif
+
+  enablePlayerViewSwitch
+
+  stopScript DreamMountDisableForceThirdPerson
+End DreamMountDisableForceThirdPerson
+]],
 }
 
 local DreamMountConfigDefault = {
+    -- 1
     {
         name = 'Guar',
         item = 'rot_c_guar00_shirtC3',
@@ -583,6 +611,7 @@ function DreamMountFunctions:toggleMount(pid, player)
 
         if not mountType or mountType == ShirtMountType then
             enableModelOverrideMount(player, charData, mount.model)
+            RunConsoleCommandOnPlayer(pid, 'startscript DreamMountForceThirdPerson')
         elseif mountType == GauntletMountType then
             RunConsoleCommandOnPlayer(pid, 'startscript DreamMountMount')
         end
@@ -605,6 +634,7 @@ function DreamMountFunctions:toggleMount(pid, player)
             charData.modelOverride = nil
             SetModel(pid, '')
             SendBaseInfo(pid)
+            RunConsoleCommandOnPlayer(pid, 'startscript DreamMountDisableForceThirdPerson')
         elseif lastMountType == GauntletMountType then
             RunConsoleCommandOnPlayer(pid, 'startscript DreamMountDismount')
         end
