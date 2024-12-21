@@ -505,6 +505,10 @@ local function getFilePath(model)
     return Format(GuarMountFilePathStr, model)
 end
 
+local function actorPacketUniqueIndex(actorIndex)
+    return Format("%s-%s", GetActorRefNum(actorIndex), GetActorMpNum(actorIndex))
+end
+
 local function addOrRemoveItem(addOrRemove, mount, player)
     local inventory = player.data.inventory
     local hasMountAlready = ContainsItem(inventory, mount)
@@ -1547,8 +1551,7 @@ function DreamMountFunctions.trackPlayerMountCell(_, _, pid, _)
 
     ReadReceivedActorList()
     for actorIndex = 0, GetActorListSize() - 1 do
-        local uniqueIndex = GetActorRefNum(actorIndex) .. "-" .. GetActorMpNum(actorIndex)
-        if uniqueIndex == customVariables[DreamMountSummonRefNumKey] then
+        if actorPacketUniqueIndex(actorIndex) == customVariables[DreamMountSummonRefNumKey] then
             customVariables[DreamMountSummonCellKey] = GetActorCell(actorIndex)
             player:QuicksaveToDrive()
         end
