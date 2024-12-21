@@ -518,28 +518,37 @@ local function buildSpellEffectString(mountSpellRecordId, mountSpell)
     return Concat(parts)
 end
 
+local Effects = {
+    FortifyAttribute = function(magnitudeMin, magnitudeMax)
+        return {
+            attribute = 4,
+            id = FortifyAttribute,
+            rangeType = 0,
+            magnitudeMin = magnitudeMin,
+            magnitudeMax = magnitudeMax or magnitudeMin,
+            skill = -1,
+        }
+    end,
+    RestoreFatigue = function(magnitudeMin, magnitudeMax)
+        return {
+            id = RestoreFatigue,
+            rangeType = 0,
+            magnitudeMin = magnitudeMin,
+            magnitudeMax = magnitudeMax or magnitudeMin,
+            skill = -1,
+        }
+    end,
+}
+
 local function getMountActiveEffects(mountData)
     local mountEffects = {}
 
     if mountData.speedBonus then
-        mountEffects[#mountEffects + 1] = {
-            attribute = 4,
-            id = FortifyAttribute,
-            rangeType = 0,
-            magnitudeMin = mountData.speedBonus,
-            magnitudeMax = mountData.speedBonus,
-            skill = -1,
-        }
+        mountEffects[#mountEffects + 1] = Effects.FortifyAttribute(mountData.speedBonus)
     end
 
     if mountData.fatigueRestore then
-        mountEffects[#mountEffects + 1] = {
-            id = RestoreFatigue,
-            rangeType = 0,
-            magnitudeMin = mountData.fatigueRestore,
-            magnitudeMax = mountData.fatigueRestore,
-            skill = -1,
-        }
+        mountEffects[#mountEffects + 1] = Effects.RestoreFatigue(mountData.speedBonus)
     end
 
     if #mountEffects > 0 then return mountEffects end
