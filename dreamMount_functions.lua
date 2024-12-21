@@ -963,6 +963,8 @@ function DreamMountFunctions:handleMountActivateMenu(pid, activateMenuChoice)
                                   playerCell, petCellRef, true)
         RunConsoleCommandOnObject(pid, "loopgroup idle2 0 0",
                                   playerCell, petCellRef, true)
+    elseif activateMenuChoice == 3 then
+        self:toggleMount(player)
     end
 end
 
@@ -1581,7 +1583,7 @@ function DreamMountFunctions.handleMountActivation(_, _, _, cellDescription, obj
 
     activatingPlayer:MessageBox(DreamMountsMountActivateGUIID,
                                 "What would you like to do with your mount?",
-                                "Open Pack;Dismiss;Pet;Nothing")
+                                "Open Pack;Dismiss;Pet;Ride;Nothing")
 end
 
 return DreamMountFunctions
