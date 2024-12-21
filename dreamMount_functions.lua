@@ -1112,6 +1112,7 @@ function DreamMountFunctions:toggleMount(player)
         local mappedEquipSlot = EquipEnums[mountSlot]
 
         customVariables[DreamMountSummonWasEnabledKey] = customVariables[DreamMountSummonRefNumKey] ~= nil
+        self:despawnBagRef(player)
         self:despawnMountSummon(player)
 
         local replaceItem = playerData.equipment[mappedEquipSlot]
