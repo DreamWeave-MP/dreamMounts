@@ -955,11 +955,16 @@ function DreamMountFunctions.validateUser(pid)
     return true
 end
 
+function DreamMountFunctions:logConfig()
+    mountLog("---------------BEGIN DREAMMOUNT CONFIG---------------")
+    tableHelper.print(self.mountConfig)
+    mountLog("---------------MERCHANT CONFIG---------------")
+    tableHelper.print(self.mountMerchants)
+    mountLog("---------------END DREAMMOUNT CONFIG---------------")
+end
+
 function DreamMountFunctions:loadMountConfig()
     self.mountConfig = Load(DreamMountConfigPath) or DreamMountConfigDefault
-    mountLog("---------------MOUNT CONFIG---------------")
-    tableHelper.print(self.mountConfig)
-    mountLog("---------------MOUNT CONFIG---------------")
 
     if self.mountConfig == DreamMountConfigDefault then
         Save(DreamMountConfigPath, self.mountConfig)
@@ -970,6 +975,8 @@ function DreamMountFunctions:loadMountConfig()
     if self.mountMerchants == DreamMountMerchantsDefault then
         Save(DreamMerchantConfigPath, self.mountMerchants)
     end
+
+    self:logConfig()
 end
 
 function DreamMountFunctions:clearCustomVariablesCommand(pid, cmd)
