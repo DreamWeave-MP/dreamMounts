@@ -74,6 +74,7 @@ local DreamMountNoMountAvailableStr = Format('%sYou do not have any mounts avail
 local DreamMountNotAPetStr = "%s%s cannot be used as a pet!"
 local DreamMountResetVarsString = Format('%sReset DreamMount variables for %s'
 , color.MediumBlue, color.Green)
+local DreamMountSameMountStr = "%s%s%s was already your preferred mount!\n"
 local DreamMountPreferredMountString = 'Select your preferred mount.'
 local DreamMountUnauthorizedUserMessage =
     Format('%sYou are not authorized to run %sdreamMount %sadmin commands!\n'
@@ -955,6 +956,14 @@ function DreamMountFunctions:setPreferredMount(_, pid, idGui, data)
     end
 
     local customVariables = player.data.customVariables
+
+    local prevPreferredMount = customVariables[DreamMountPreferredMountKey]
+    if prevPreferredMount and prevPreferredMount == selectedMountIndex then
+        return player:Message(Format(DreamMountSameMountStr,
+                                     color.MistyRose,
+                                     selectedMountName,
+                                     color.Maroon))
+    end
 
     despawnMountSummon(player)
     dismountIfMounted(player)
