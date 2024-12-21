@@ -167,7 +167,7 @@ for eventName, callbackName in pairs {
   OnObjectDialogueChoice = 'reloadMountMerchants',
   OnActorCellChange = 'trackPlayerMountCell',
   OnActorDeath = 'onMountDied',
-  OnPlayerAuthentified = 'cleanUpMountOnLogin',
+  OnPlayerFinishLogin = 'cleanUpMountOnLogin',
   OnObjectHit = 'dismountOnHit'
 } do localRegisterThing
   {
