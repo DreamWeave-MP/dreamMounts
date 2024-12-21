@@ -971,8 +971,8 @@ function DreamMountFunctions:handleMountActivateMenu(pid, activateMenuChoice)
     activateMenuChoice = tonumber(activateMenuChoice)
     local player = Players[pid]
 
-    assert(activateMenuChoice, "Don't feel like writing another error message!")
-    assert(player and player:IsLoggedIn(), "Don't feel like writing another error message!")
+    assert(activateMenuChoice, "Failed to convert activation menu choice to a number, or none provided!")
+    assert(player and player:IsLoggedIn(), "Cannot activate container for an unlogged player!")
 
     if activateMenuChoice == 0 then
         self:activateMountContainer(player)
