@@ -6,6 +6,7 @@ local Format = string.format
 local Traceback = debug.traceback
 
 -- TES3MP Functions
+local AddCreatureRecord = packetBuilder.AddCreatureRecord
 local AddItem = inventoryHelper.addItem
 local AddRecordTypeToPacket = packetBuilder.AddRecordByType
 local BuildObjectData = dataTableBuilder.BuildObjectData
@@ -35,6 +36,8 @@ local SlowSave = jsonInterface.save
 --TES3MP Globals
 local AddToInventory = enumerations.inventory.ADD
 local AIFollow = enumerations.ai.FOLLOW
+local BarterDialogue = enumerations.dialogueChoice.BARTER
+local ContainerRecordType = enumerations.recordType.CONTAINER
 local CreatureRecordType = enumerations.recordType.CREATURE
 local EquipEnums = enumerations.equipment
 local FortifyAttribute = enumerations.effects.FORTIFY_ATTRIBUTE
@@ -665,9 +668,10 @@ local function createPetRecord(petRecordInput)
 
     local petName = Format("%s's %s", player.name, mountName)
     local petLevel = playerPetData.levelPct * playerStats.level
-    local chopMax = round(playerPetData.damageChop * (1 + (playerPetData.damagePerLevelPct * petLevel)))
-    local slashMax = round(playerPetData.damageSlash * (1 + (playerPetData.damagePerLevelPct * petLevel)))
-    local thrustMax = round(playerPetData.damageThrust * (1 + (playerPetData.damagePerLevelPct * petLevel)))
+    local damagePerLevelPct = playerPetData.damagePerLevelPct
+    local chopMax = round(playerPetData.damageChop * (1 + (damagePerLevelPct * petLevel)))
+    local slashMax = round(playerPetData.damageSlash * (1 + (damagePerLevelPct * petLevel)))
+    local thrustMax = round(playerPetData.damageThrust * (1 + (damagePerLevelPct * petLevel)))
 
     local petRecord = {
         name = petName,
@@ -703,8 +707,10 @@ function DreamMountFunctions:reloadMountMerchants(_, _, cellDescription, objects
     local objectData = cell.data.objectData
     local reloadInventory = false
     local currentMountKeys = 0
-    local currentInventory = objectData[actor.uniqueIndex].inventory
+    local cellRef = objectData[actorIndex]
+    local currentInventory = cellRef.inventory
 
+    assert(cellRef, "Unable to locate actor by index in this cell!\n" .. Traceback(3))
     assert(objectData, Format(DreamMountNilObjectDataErr, Traceback(3)))
     assert(currentInventory, Format(DreamMountNilInventoryErr, Traceback(3)))
 
