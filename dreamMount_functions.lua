@@ -1308,6 +1308,7 @@ end
 function DreamMountFunctions:slowSaveOnEmptyWorld()
     if next(Players) then return end
     SlowSave(DreamMountConfigPath, self.mountConfig)
+    SlowSave(DreamMerchantConfigPath, self.mountMerchants)
 end
 
 function DreamMountFunctions:toggleMountCommand(pid)
