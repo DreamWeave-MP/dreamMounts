@@ -766,9 +766,6 @@ function DreamMountFunctions:createMountMenuString(player)
         if KeyRecords[itemId] then possessedKeys[itemId] = true end
     end
 
-    tableHelper.print(KeyRecords)
-    tableHelper.print(possessedKeys)
-
     for _, MountData in ipairs(self.mountConfig) do
         local keyId = getMountKeyString(MountData)
         if possessedKeys[keyId] then
