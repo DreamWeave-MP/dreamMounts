@@ -553,6 +553,12 @@ local function dismountIfMounted(player)
     end
 end
 
+function DreamMountFunctions:getMountData(player)
+    assert(player and player:IsLoggedIn(), Traceback(3))
+    local preferredMount = player.data.customVariables[DreamMountPreferredMountKey]
+    return self.mountConfig[preferredMount]
+end
+
 function DreamMountFunctions:despawnBagRef(player)
     assert(player, DreamMountDespawnNoPlayerErr .. Traceback(3))
 
@@ -855,6 +861,14 @@ function DreamMountFunctions:getCurrentContainerData(player)
     return mountInventories[self:getContainerRecordId(player)]
 end
 
+function DreamMountFunctions:mountHasContainerData(player)
+    local mountData = self:getMountData(player)
+
+    if mountData and mountData.containerData then
+        return true
+    end
+end
+
 function DreamMountFunctions:getContainerRecordId(player)
     assert(player and player:IsLoggedIn(), Traceback(3))
     local mountName = self:getPlayerMountName(player)
@@ -863,17 +877,13 @@ function DreamMountFunctions:getContainerRecordId(player)
 end
 
 function DreamMountFunctions:getPlayerPetName(player)
-    assert(player and player:IsLoggedIn(), Traceback(3))
-    local preferredMount = player.data.customVariables[DreamMountPreferredMountKey]
-    local mountData = self.mountConfig[preferredMount]
+    local mountData = self:getMountData(player)
     if not mountData or not mountData.petData then return end
     return Format("%s's %s", player.name, mountData.name)
 end
 
 function DreamMountFunctions:getPlayerMountName(player)
-    assert(player and player:IsLoggedIn(), Traceback(3))
-    local preferredMount = player.data.customVariables[DreamMountPreferredMountKey]
-    local mountData = self.mountConfig[preferredMount]
+    local mountData = self:getMountData(player)
     return mountData and mountData.name
 end
 
@@ -966,6 +976,10 @@ function DreamMountFunctions:selectedMountIsPet(player)
 end
 
 function DreamMountFunctions:activateMountContainer(player)
+    if not self:mountHasContainerData(player) then
+        return player:Message("This mount does not have any container data!\n")
+    end
+
     self:despawnBagRef(player)
     self.sendContainerPlacePacket(self:createContainerServerside(player))
     self:updateCurrentMountContainer(player)
@@ -1595,7 +1609,7 @@ function DreamMountFunctions:openContainerForNonSummon(pid, _)
     if not self:selectedMountIsPet(player) then
         self:activateMountContainer(player)
     else
-        player:Message(color.Red .. "Your currently selected mount must be summoned to use its container!")
+        player:Message(color.Red .. "Your currently selected mount must be summoned to use its container!\n")
     end
 end
 
