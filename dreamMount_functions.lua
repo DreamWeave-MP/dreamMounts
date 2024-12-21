@@ -752,7 +752,7 @@ function DreamMountFunctions:createContainerServerside(player)
     local cellDescription = tes3mp.GetCell(pid)
 	local mpNum = WorldInstance:GetCurrentMpNum() + 1
 
-	local uniqueIndex =  0 .. "-" .. mpNum
+	local uniqueIndex =  Format("0-%s", mpNum)
 
 	local bagSpawnCell = LoadedCells[cellDescription]
 	assert(bagSpawnCell, "The cellDescription requested is not a loaded cell! This should never happen!\n"
