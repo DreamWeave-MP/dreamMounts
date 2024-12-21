@@ -701,22 +701,26 @@ local function spawnMountSummon(player, summonId)
     player:QuicksaveToDrive()
 end
 
+local function toggleSpell(spell, player, spellRecords)
+    if not spellRecords then spellRecords = RecordStores['spell'].data.permanentRecords end
+
+    player:updateSpellbook {
+        [spell] = false,
+    }
+
+    if spellRecords[spell] then
+        player:updateSpellbook {
+            [spell] = true,
+        }
+    end
+end
+
 --- Remove and if necessary, re-add the relevant mount buff for the player
 --- Used when resetting the spell records, or custom variables
 local function resetMountSpellForPlayer(player, spellRecords)
     local prevMountSpell = player.data.customVariables[DreamMountPrevSpellId]
     if not prevMountSpell then return end
-    if not spellRecords then spellRecords = RecordStores['spell'].data.permanentRecords end
-
-    player:updateSpellbook {
-        [prevMountSpell] = false,
-    }
-
-    if spellRecords[prevMountSpell] then
-        player:updateSpellbook {
-            [prevMountSpell] = true,
-        }
-    end
+    toggleSpell(prevMountSpell, player, spellRecords)
 end
 
 --- Resets all DreamMount state for a given player
