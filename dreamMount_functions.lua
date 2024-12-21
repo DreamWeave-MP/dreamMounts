@@ -956,9 +956,8 @@ function DreamMountFunctions:setPreferredMount(_, pid, idGui, data)
 
     local customVariables = player.data.customVariables
 
-    if customVariables[DreamMountEnabledKey] then
-        self:toggleMount(player)
-    end
+    despawnMountSummon(player)
+    dismountIfMounted(player)
 
     customVariables[DreamMountPreferredMountKey] = selectedMountIndex
 end
