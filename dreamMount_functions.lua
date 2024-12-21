@@ -700,15 +700,15 @@ local function createPetRecord(petRecordInput)
     SendRecordDynamic(player.pid, true)
 end
 
-local function getContainerRecordId(player)
+function DreamMountFunctions:getContainerRecordId(player)
     assert(player and player:IsLoggedIn(), Traceback(3))
-    local mountName = DreamMountFunctions:getPlayerMountName(player)
+    local mountName = self:getPlayerMountName(player)
     return Format("%s_%s_container", player.name, mountName):lower()
 end
 
-local function getPlayerPetName(player)
+function DreamMountFunctions:getPlayerPetName(player)
     assert(player and player:IsLoggedIn(), Traceback(3))
-    local mountName = DreamMountFunctions:getPlayerMountName(player)
+    local mountName = self:getPlayerMountName(player)
     return Format("%s's %s", player.name, mountName)
 end
 
@@ -1182,7 +1182,7 @@ function DreamMountFunctions:getPlayerMountSummon(player)
     return Format("%s_%s_%s_pet", playerName, mountRefNum, mountData.name):lower()
 end
 
-function DreamMountFunctions.createContainerRecord(petRecordInput)
+function DreamMountFunctions:createContainerRecord(petRecordInput)
     local player = petRecordInput.player
     local playerPetData = petRecordInput.playerPetData
 
@@ -1191,11 +1191,11 @@ function DreamMountFunctions.createContainerRecord(petRecordInput)
     local containerRecordStore = RecordStores["container"]
     local containerRecords = containerRecordStore.data.permanentRecords
 
-    local containerId = getContainerRecordId(player)
+    local containerId = self:getContainerRecordId(player)
     local playerStrength = player.data.attributes.Strength.base
     local containerRecord = {
-        name = getPlayerPetName(player),
-        weight = playerPetData.carryCapacityBase + ( playerStrength * playerPetData.carryCapacityPerStrength )
+        name = self:getPlayerPetName(player),
+        weight = playerPetData.carryCapacityBase + ( playerStrength * playerPetData.carryCapacityPerStrength ),
     }
 
     containerRecords[containerId] = containerRecord
@@ -1237,7 +1237,7 @@ function DreamMountFunctions:summonCreatureMount(pid, _)
     local summonsTable = customVariables[DreamMountCurrentSummonsKey]
     summonsTable[mountName] = petId
 
-    self.createContainerRecord {
+    self:createContainerRecord {
         player = player,
         mountName = mountName,
         playerPetData = mountData.petData
