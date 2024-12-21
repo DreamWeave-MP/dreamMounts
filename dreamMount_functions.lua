@@ -516,6 +516,28 @@ local function dismountIfMounted(player)
     end
 end
 
+--- NOTE: I'm not dealing with it right now, BUT
+--- We'll need to also run this as part of the other relevant state switching
+--- when your preferred mount changes
+--- Don't wanna leave old cell refs just laying around!
+function DreamMountFunctions:despawnBagRef(player)
+    assert(player, DreamMountDespawnNoPlayerErr .. Traceback(3))
+
+    local containerData = self:getCurrentContainerData(player)
+    if not containerData or not containerData.cell or not containerData.index then return end
+
+    local containerIndex = table.concat(containerData.index, '-')
+
+    DeleteObjectForEveryone(containerData.cell, containerIndex)
+    containerData.cell = nil
+    containerData.index = nil
+
+    mountLog(Format("Successfully despawned old %s container with index %s for player %s",
+                    self:getContainerRecordId(player),
+                    containerIndex,
+                    player.name))
+end
+
 --- Destroys the player's summoned pet, if one exists.
 --- This method also destroys the associated creature record, since current impl would
 --- otherwide be really spammy.
@@ -720,6 +742,16 @@ local function saveContainerData(containerSaveData)
     containerData.cell = containerCell
 end
 
+function DreamMountFunctions:getCurrentContainerData(player)
+    assert(player and player:IsLoggedIn(), Traceback(3))
+
+    local customVariables = player.data.customVariables
+    local mountInventories = customVariables[DreamMountSummonInventoryDataKey]
+    if not mountInventories then return end
+
+    return mountInventories[self:getContainerRecordId(player)]
+end
+
 function DreamMountFunctions:getContainerRecordId(player)
     assert(player and player:IsLoggedIn(), Traceback(3))
     local mountName = self:getPlayerMountName(player)
@@ -835,6 +867,7 @@ function DreamMountFunctions:handleMountActivateMenu(pid, activateMenuChoice)
     assert(player and player:IsLoggedIn(), "Don't feel like writing another error message!")
 
     if activateMenuChoice == 0 then
+        self:despawnBagRef(player)
         self.sendContainerPacket(self:createContainerServerside(player))
     elseif activateMenuChoice == 1 then
         mountLog(Format("%s dismissed their mount!", player.name))
