@@ -1,4 +1,5 @@
--- Need separate data structure for clothing records
+--- Handle Activation to dismiss the companion or open its container
+--- Make automatically re-enabling the companion opt-out
 
 -- STL Functions
 local Concat = table.concat
@@ -20,9 +21,9 @@ local GetActorMpNum = tes3mp.GetActorMpNum
 local GetActorRefNum = tes3mp.GetActorRefNum
 local ListBox = tes3mp.ListBox
 local Load = jsonInterface.load
-local LoadCellForPlayer = logicHandler.LoadCellForPlayer
 local ReadReceivedActorList = tes3mp.ReadReceivedActorList
 local RemoveClosestItem = inventoryHelper.removeClosestItem
+local RunConsoleCommandOnObject = logicHandler.RunConsoleCommandOnObject
 local RunConsoleCommandOnPlayer = logicHandler.RunConsoleCommandOnPlayer
 local Save = jsonInterface.quicksave
 local SendBaseInfo = tes3mp.SendBaseInfo
@@ -50,6 +51,7 @@ local SpellRecordType = enumerations.recordType.SPELL
 -- Local Constants
 local DreamMountAdminRankRequired = 2
 local DreamMountsGUIID = 381342
+local DreamMountsMountActivateGUIID = 381343
 local GauntletMountType = 0
 local MountDefaultFatigueRestore = 3
 local ShirtMountType = 1
@@ -85,6 +87,7 @@ local DreamMountUnauthorizedUserMessage =
     Format('%sYou are not authorized to run %sdreamMount %sadmin commands!\n'
     , color.Red, color.MediumBlue, color.Red)
 local DreamMountDefaultListString = "Cancel"
+local DreamMountUnownedMountActivateStr = color.Red .. "You cannot activate this mount as it does not belong to you!"
 
 -- Patterns
 local DreamMountNoPreferredMountMessage = '%s%s %s'
@@ -121,6 +124,7 @@ local DreamMountUnloggedPlayerSummonErr = "Cannot summon a mount for an unlogged
 
 -- CustomVariables index keys
 local DreamMountEnabledKey = 'dreamMountIsMounted'
+local DreamMountNoAutoSummonKey = 'dreamMountAutoSummon'
 local DreamMountPreferredMountKey = 'dreamMountPreferredMount'
 local DreamMountPrevItemId = 'dreamMountPreviousItemId'
 local DreamMountPrevMountTypeKey = 'dreamMountPreviousMountType'
@@ -688,15 +692,39 @@ local function createPetRecord(petRecordInput)
     creatureRecords[petId] = petRecord
     creatureRecordStore:Save()
 
-    packetBuilder.AddCreatureRecord(petId, petRecord)
+    AddCreatureRecord(petId, petRecord)
 
     SendRecordDynamic(player.pid, true)
 end
 
-function DreamMountFunctions:reloadMountMerchants(_, _, cellDescription, objects)
-    local _, actor = next(objects)
+local function handleMountActivateMenu(pid, activateMenuChoice)
+    activateMenuChoice = tonumber(activateMenuChoice)
+    local player = Players[pid]
 
-    if actor.dialogueChoiceType ~= enumerations.dialogueChoice.BARTER then return end
+    assert(activateMenuChoice, "Don't feel like writing another error message!")
+    assert(player and player:IsLoggedIn(), "Don't feel like writing another error message!")
+
+    if activateMenuChoice == 0 then
+        return player:Message("Sucks to suck, this one's not implemented yet!")
+    elseif activateMenuChoice == 1 then
+        mountLog(Format("%s dismissed their mount!", player.name))
+        despawnMountSummon(player)
+    elseif activateMenuChoice == 2 then
+        local petCellRef = player.data.customVariables[DreamMountSummonRefNumKey]
+        local playerCell = player.data.location.cell
+        assert(petCellRef, "You can't have activated this object if you don't have a pet assigned!")
+
+        RunConsoleCommandOnObject(pid, "loopgroup idle6 1 2",
+                                  playerCell, petCellRef, true)
+        RunConsoleCommandOnObject(pid, "loopgroup idle2 0 0",
+                                  playerCell, petCellRef, true)
+    end
+end
+
+function DreamMountFunctions:reloadMountMerchants(_, _, cellDescription, objects)
+    local actorIndex, actor = next(objects)
+
+    if actor.dialogueChoiceType ~= BarterDialogue then return end
     local expectedKeys = DreamMountMerchants[actor.refId]
     if not expectedKeys then return end
 
@@ -951,7 +979,10 @@ function DreamMountFunctions.clearCustomVariablesCommand(_, pid, cmd)
 end
 
 function DreamMountFunctions:setPreferredMount(_, pid, idGui, data)
-    if idGui ~= DreamMountsGUIID then return end
+    if idGui == DreamMountsMountActivateGUIID then
+        return handleMountActivateMenu(pid, data)
+    elseif idGui ~= DreamMountsGUIID then return end
+
     local player = Players[pid]
 
     if not player or not player:IsLoggedIn() then return end
@@ -1237,5 +1268,27 @@ function DreamMountFunctions.dismountOnHit(_, _, _, _, _, targetPlayers)
         dismountIfMounted(targetPlayer)
     end
 end
+
+customEventHooks.registerHandler("OnObjectActivate", function(_, _, cellDescription, objects, _)
+    local firstIndex, firstObject = next(objects)
+    local activatingPlayer = Players[firstObject.activatingPid]
+    local mountRefNum = activatingPlayer.data.customVariables[DreamMountSummonRefNumKey]
+
+    -- Logic here is faulty. Below can say if we didn't activate our mount
+    -- but doesn't express whether the activated thing was a mount at all
+    -- so you get false positives doing totally normal things like opening doors.
+    --return tes3mp.MessageBox(activatingPlayer.pid, -1, DreamMountUnownedMountActivateStr)
+    if mountRefNum and mountRefNum ~= firstIndex then return end
+
+    mountLog(Format("%s activated their mount %s with index %s in cell %s",
+                 activatingPlayer.name,
+                 firstObject.refId,
+                 firstIndex,
+                 cellDescription))
+
+    activatingPlayer:MessageBox(DreamMountsMountActivateGUIID,
+                                "What would you like to do with your mount?",
+                                "Open Pack;Dismiss;Pet;Nothing")
+end)
 
 return DreamMountFunctions

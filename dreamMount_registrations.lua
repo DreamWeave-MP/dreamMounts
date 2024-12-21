@@ -4,6 +4,7 @@ local Traceback = debug.traceback
 local AddSpell = tes3mp.AddSpell
 local ClearSpellbookChanges = tes3mp.ClearSpellbookChanges
 local ContainsItem = inventoryHelper.containsItem
+local CustomMessageBox = tes3mp.CustomMessageBox
 local EquipItem = tes3mp.EquipItem
 local ProcessCommand = commandHandler.ProcessCommand
 local RegisterCommand = customCommandHooks.registerCommand
@@ -80,8 +81,17 @@ local function updateEquipment(self, equipmentUpdateTable)
   SendEquipment(myPid)
 end
 
+---@param self JSONPlayer
+---@param id integer numeric id of the messagebox
+---@param label string Header text of the messagebox
+---@param buttons string Semicolon-separated string of button texts
+local function customMessageBox(self, id, label, buttons)
+  CustomMessageBox(self.pid, id, label, buttons)
+end
+
 --- Extend built-in functionality of certain object types on server initialization
 local function extendBuiltins()
+  Player['MessageBox'] = customMessageBox
   Player['updateSpellbook'] = updatePlayerSpellbook
   Player['updateEquipment'] = updateEquipment
 end
