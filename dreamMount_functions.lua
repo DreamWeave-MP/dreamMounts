@@ -864,9 +864,10 @@ end
 
 function DreamMountFunctions:getPlayerPetName(player)
     assert(player and player:IsLoggedIn(), Traceback(3))
-    local mountName = self:getPlayerMountName(player)
-    if not mountName then return end
-    return Format("%s's %s", player.name, mountName)
+    local preferredMount = player.data.customVariables[DreamMountPreferredMountKey]
+    local mountData = self.mountConfig[preferredMount]
+    if not mountData or not mountData.petData then return end
+    return Format("%s's %s", player.name, mountData.name)
 end
 
 function DreamMountFunctions:getPlayerMountName(player)
