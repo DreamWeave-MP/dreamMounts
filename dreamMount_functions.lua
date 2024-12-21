@@ -425,43 +425,11 @@ local DreamMountMerchantsDefault = {
     },
 }
 
-local TemplateEffects = {
-    FortifySpeed = {
-        attribute = 4,
-        area = 0,
-        duration = 0,
-        id = FortifyAttribute,
-        rangeType = 0,
-        skill = -1,
-        magnitudeMin = nil,
-        magnitudeMax = nil
-    },
-    RestoreFatigue = {
-        attribute = -1,
-        area = 0,
-        duration = 0,
-        id = RestoreFatigue,
-        rangeType = 0,
-        skill = -1,
-        magnitudeMin = 3,
-        magnitudeMax = 3
-    },
-}
-
-local InventoryItemTemplate = {
-    charge = -1,
-    count = 1,
-    refId = '',
-    soul = '',
-}
-
 local KeyItemTemplate = {
     value = 3000,
     icon = "c/tx_belt_common01.tga",
     model = "c/c_belt_common_1.nif",
     weight = 0.0,
-    script = "",
-    keyState = nil,
 }
 
 local DreamMountFunctions = {
@@ -486,23 +454,6 @@ local function getKeyTemplate(mountData)
     return newKey
 end
 
-local function getTemplateEffect(templateEffect, magnitude)
-    assert(magnitude and magnitude > 0, DreamMountInvalidSpellEffectErrorStr)
-    local effect = {}
-    for k, v in pairs(templateEffect) do effect[k] = v end
-    effect.magnitudeMin = magnitude
-    effect.magnitudeMax = magnitude
-    return effect
-end
-
-local function getRestoreFatigueEffect(magnitude)
-    return getTemplateEffect(TemplateEffects.RestoreFatigue, magnitude)
-end
-
-local function getFortifySpeedEffect(magnitude)
-    return getTemplateEffect(TemplateEffects.FortifySpeed, magnitude)
-end
-
 local function getFilePath(model)
     return Format(GuarMountFilePathStr, model)
 end
@@ -519,10 +470,7 @@ local function addOrRemoveItem(addOrRemove, mount, player)
 
     (addOrRemove and AddItem or RemoveClosestItem)(inventory, mount, 1)
 
-    local inventoryItem = InventoryItemTemplate
-    inventoryItem.refId = mount
-
-    player:LoadItemChanges ({ inventoryItem, }, (addOrRemove and AddToInventory or RemoveFromInventory))
+    player:LoadItemChanges ({{ refId = mount, count = 1, }}, (addOrRemove and AddToInventory or RemoveFromInventory))
 end
 
 local function enableModelOverrideMount(player, characterData, mountModel)
@@ -551,6 +499,65 @@ local function dismountIfMounted(player)
     if player.data.customVariables[DreamMountEnabledKey] then
         DreamMountFunctions:toggleMount(player)
     end
+end
+
+local function buildSpellEffectString(mountSpellRecordId, mountSpell)
+    local parts = {
+        mountSpellRecordId,
+        ':\n----------'
+    }
+
+    for _, spellEffect in ipairs(mountSpell.effects) do
+        parts[#parts + 1] = '\n'
+        for k, v in pairs(spellEffect) do
+            parts[#parts + 1] = Format('%s: %s ', k, v)
+        end
+        parts[#parts + 1] = '\n----------'
+    end
+
+    return Concat(parts)
+end
+
+local function getMountActiveEffects(mountData)
+    local mountEffects = {}
+
+    if mountData.speedBonus then
+        mountEffects[#mountEffects + 1] = {
+            attribute = 4,
+            id = FortifyAttribute,
+            rangeType = 0,
+            magnitudeMin = mountData.speedBonus,
+            magnitudeMax = mountData.speedBonus,
+            skill = -1,
+        }
+    end
+
+    if mountData.fatigueRestore then
+        mountEffects[#mountEffects + 1] = {
+            id = RestoreFatigue,
+            rangeType = 0,
+            magnitudeMin = mountData.fatigueRestore,
+            magnitudeMax = mountData.fatigueRestore,
+            skill = -1,
+        }
+    end
+
+    if #mountEffects > 0 then return mountEffects end
+end
+
+function DreamMountFunctions:addMountSpellEffect(mountIndex, effects, permanentSpells)
+    local mountSpellRecordId = self:getMountSpellIdString(mountIndex)
+    local mountSpell = {
+        effects = effects,
+        subtype = 1,
+    }
+    local spellString = buildSpellEffectString(mountSpellRecordId, mountSpell)
+
+    permanentSpells[mountSpellRecordId] = mountSpell
+
+    mountLog(Format(DreamMountCreatedSpellRecordStr, spellString))
+
+    AddRecordTypeToPacket(mountSpellRecordId, mountSpell, 'spell')
 end
 
 function DreamMountFunctions:getMountData(player)
@@ -761,23 +768,6 @@ local function clearCustomVarsForPlayer(player)
                        , DreamMountResetVarsString
                        , player.name)
                 , false)
-end
-
-local function buildSpellEffectString(mountSpellRecordId, mountSpell)
-    local parts = {
-        mountSpellRecordId,
-        ':\n----------'
-    }
-
-    for _, spellEffect in ipairs(mountSpell.effects) do
-        parts[#parts + 1] = '\n'
-        for k, v in pairs(spellEffect) do
-            parts[#parts + 1] = Format('%s: %s ', k, v)
-        end
-        parts[#parts + 1] = '\n----------'
-    end
-
-    return Concat(parts)
 end
 
 local function createScriptRecords()
@@ -1410,27 +1400,11 @@ function DreamMountFunctions:createMountSpells(firstPlayer)
 
     local spellsSaved = 0
     for index, mountData in ipairs(self.mountConfig) do
-        local mountEffects = {}
+        local mountEffects = getMountActiveEffects(mountData)
 
-        if mountData.speedBonus then
-            mountEffects[#mountEffects + 1] = getFortifySpeedEffect(mountData.speedBonus)
-        end
-
-        if mountData.fatigueRestore then
-            mountEffects[#mountEffects + 1] = getRestoreFatigueEffect(mountData.fatigueRestore)
-        end
-
-        if #mountEffects >= 1 then
-            local mountSpellRecordId, mountSpell = self:getMountEffect(mountEffects, index)
-            local spellString = buildSpellEffectString(mountSpellRecordId, mountSpell)
-
-            permanentSpells[mountSpellRecordId] = mountSpell
-
-            mountLog(Format(DreamMountCreatedSpellRecordStr, spellString))
-
-            AddRecordTypeToPacket(mountSpellRecordId, mountSpell, 'spell')
+        if mountEffects then
+            self:addMountSpellEffect(index, mountEffects, permanentSpells)
             spellsSaved = spellsSaved + 1
-
         else
             local removeSpellId = self:getMountSpellIdString(index)
             permanentSpells[removeSpellId] = nil
