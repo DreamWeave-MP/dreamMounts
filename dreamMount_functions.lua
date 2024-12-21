@@ -249,8 +249,8 @@ local DreamMountConfigDefault = {
             chopMinDmgPct = 0.40,
             slashMinDmgPct = 0.40,
             thrustMinDmgPct = 0.40,
-            carryCapacityBase = 50,
-            carryCapacityPerStrength = 3,
+            carryCapacityBase = 30,
+            carryCapacityPerStrength = 1.25,
         }
     },
     -- 2
