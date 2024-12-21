@@ -23,6 +23,8 @@ local GetActorListSize = tes3mp.GetActorListSize
 local GetActorMpNum = tes3mp.GetActorMpNum
 local GetActorRefNum = tes3mp.GetActorRefNum
 local GetCell = tes3mp.GetCell
+local GetPosX = tes3mp.GetPosX
+local GetPosY = tes3mp.GetPosY
 local ListBox = tes3mp.ListBox
 local Load = jsonInterface.load
 local MessageBox = tes3mp.MessageBox
@@ -38,14 +40,21 @@ local SetContainerItemCount = tes3mp.SetContainerItemCount
 local SetContainerItemEnchantmentCharge = tes3mp.SetContainerItemEnchantmentCharge
 local SetContainerItemRefId = tes3mp.SetContainerItemRefId
 local SetContainerItemSoul = tes3mp.SetContainerItemSoul
+local SetCurrentMpNum = tes3mp.SetCurrentMpNum
 local SetModel = tes3mp.SetModel
+local SetObjectActivatingPid = tes3mp.SetObjectActivatingPid
 local SetObjectListAction = tes3mp.SetObjectListAction
 local SetObjectListCell = tes3mp.SetObjectListCell
 local SetObjectListPid = tes3mp.SetObjectListPid
 local SetObjectMpNum = tes3mp.SetObjectMpNum
+local SetObjectPosition = tes3mp.SetObjectPosition
 local SetObjectRefId = tes3mp.SetObjectRefId
 local SetObjectRefNum = tes3mp.SetObjectRefNum
+local SetObjectRotation = tes3mp.SetObjectRotation
 local SendContainer = tes3mp.SendContainer
+local SendObjectActivate = tes3mp.SendObjectActivate
+local SendObjectPlace = tes3mp.SendObjectPlace
+local SendObjectScale = tes3mp.SendObjectScale
 local SendRecordDynamic = tes3mp.SendRecordDynamic
 local SetAIForActor = logicHandler.SetAIForActor
 local SetRecordType = tes3mp.SetRecordType
@@ -553,30 +562,30 @@ function DreamMountFunctions:despawnBagRef(player)
                     self:getContainerRecordId(player),
                     containerIndex,
                     player.name))
-    player:QuickSaveToDrive()
+    player:QuicksaveToDrive()
 end
 
 function DreamMountFunctions:activateCurrentMountContainer(player)
     local pid = player.pid
-    tes3mp.ClearObjectList()
+    ClearObjectList()
 
-    tes3mp.SetObjectListPid(pid)
+    SetObjectListPid(pid)
 
-    tes3mp.SetObjectListCell(tes3mp.GetCell(pid))
+    SetObjectListCell(GetCell(pid))
 
     local containerData = self:getCurrentContainerData(player)
     if not containerData then return end
     local splitIndex = containerData.index
 
-    tes3mp.SetObjectRefNum(splitIndex[1])
+    SetObjectRefNum(splitIndex[1])
 
-    tes3mp.SetObjectMpNum(splitIndex[2])
+    SetObjectMpNum(splitIndex[2])
 
-    tes3mp.SetObjectActivatingPid(pid)
+    SetObjectActivatingPid(pid)
 
-    tes3mp.AddObject()
+    AddObject()
 
-    tes3mp.SendObjectActivate()
+    SendObjectActivate()
 end
 
 function DreamMountFunctions:updateCurrentMountContainer(player)
@@ -864,30 +873,30 @@ function DreamMountFunctions.sendContainerPlacePacket(containerPacket)
 ---@diagnostic disable-next-line: deprecated
 	local pid, splitIndex, targetContainer, targetObject = unpack(containerPacket)
 
-	tes3mp.ClearObjectList()
-	tes3mp.SetObjectListPid(pid)
-	tes3mp.SetObjectListCell(tes3mp.GetCell(pid))
+	ClearObjectList()
+	SetObjectListPid(pid)
+	SetObjectListCell(GetCell(pid))
 
-	tes3mp.SetObjectRefNum(splitIndex[1])
-	tes3mp.SetObjectMpNum(splitIndex[2])
-	tes3mp.SetObjectRefId(targetContainer)
+	SetObjectRefNum(splitIndex[1])
+	SetObjectMpNum(splitIndex[2])
+	SetObjectRefId(targetContainer)
 
 	local location = targetObject.location
-	tes3mp.SetObjectPosition(location.posX, location.posY, location.posZ)
-	tes3mp.SetObjectRotation(location.rotX, location.rotY, location.rotZ)
+	SetObjectPosition(location.posX, location.posY, location.posZ)
+	SetObjectRotation(location.rotX, location.rotY, location.rotZ)
 
-	tes3mp.SetObjectScale(targetObject.scale)
+	SetObjectScale(targetObject.scale)
 
-	tes3mp.AddObject()
+	AddObject()
 
-	tes3mp.SendObjectPlace(false)
-	tes3mp.SendObjectScale(false)
+	SendObjectPlace(false)
+	SendObjectScale(false)
 end
 
 function DreamMountFunctions:createContainerServerside(player)
     local targetContainer = self:getContainerRecordId(player)
     local pid = player.pid
-    local cellDescription = tes3mp.GetCell(pid)
+    local cellDescription = GetCell(pid)
 	local mpNum = WorldInstance:GetCurrentMpNum() + 1
 
 	local uniqueIndex =  Format("0-%s", mpNum)
@@ -907,8 +916,8 @@ function DreamMountFunctions:createContainerServerside(player)
 		   .. debug.traceback(3))
 
     targetObject.location = {
-        posX = tes3mp.GetPosX(pid),
-        posY = tes3mp.GetPosY(pid),
+        posX = GetPosX(pid),
+        posY = GetPosY(pid),
         posZ = -99999,
         rotX = 0,
         rotY = 0,
@@ -926,7 +935,7 @@ function DreamMountFunctions:createContainerServerside(player)
 
 	WorldInstance:SetCurrentMpNum(mpNum)
 
-	tes3mp.SetCurrentMpNum(mpNum)
+	SetCurrentMpNum(mpNum)
 
     local splitIndex = uniqueIndex:split('-')
     saveContainerData {
