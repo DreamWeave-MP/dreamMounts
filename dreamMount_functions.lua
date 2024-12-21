@@ -135,6 +135,7 @@ local DreamMountSummonRefNumKey = 'dreamMountSummonRefNum'
 local DreamMountSummonCellKey = 'dreamMountSummonCellDescription'
 local DreamMountSummonWasEnabledKey = 'dreamMountHadMountSummon'
 local DreamMountCurrentSummonsKey = 'dreamMountSummonsTable'
+local DreamMountSummonInventoryDataKey = 'dreamMountSummonInventories'
 
 -- MWScripts
 
@@ -700,6 +701,25 @@ local function createPetRecord(petRecordInput)
     SendRecordDynamic(player.pid, true)
 end
 
+local function saveContainerData(containerSaveData)
+    local player, containerId, containerIndex, containerCell = unpack(containerSaveData)
+    local customVariables = player.data.customVariables
+
+    if not customVariables[DreamMountSummonInventoryDataKey] then
+        customVariables[DreamMountSummonInventoryDataKey] = {}
+    end
+
+    local inventoryData = customVariables[DreamMountSummonInventoryDataKey]
+    if not inventoryData[containerId] then
+        inventoryData[containerId] = {}
+        inventoryData[containerId].inventory = {}
+    end
+
+    local containerData = inventoryData[containerId]
+    containerData.index = containerIndex
+    containerData.cell = containerCell
+end
+
 function DreamMountFunctions:getContainerRecordId(player)
     assert(player and player:IsLoggedIn(), Traceback(3))
     local mountName = self:getPlayerMountName(player)
@@ -790,9 +810,18 @@ function DreamMountFunctions:createContainerServerside(player)
 
 	tes3mp.SetCurrentMpNum(mpNum)
 
+    local splitIndex = uniqueIndex:split('-')
+
+    saveContainerData {
+        player,
+        targetContainer,
+        splitIndex,
+        cellDescription,
+    }
+
     return {
         pid,
-        uniqueIndex:split("-"),
+        splitIndex,
         targetContainer,
         targetObject
     }
