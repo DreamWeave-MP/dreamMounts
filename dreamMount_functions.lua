@@ -1200,4 +1200,10 @@ function DreamMountFunctions.cleanUpMountOnLogin(_, _, pid)
     dismountIfMounted(player)
 end
 
+function DreamMountFunctions.dismountOnHit(_, _, _, _, _, targetPlayers)
+    for _, targetPlayer in pairs(targetPlayers) do
+        dismountIfMounted(targetPlayer)
+    end
+end
+
 return DreamMountFunctions

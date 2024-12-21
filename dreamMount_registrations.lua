@@ -168,6 +168,7 @@ for eventName, callbackName in pairs {
   OnActorCellChange = 'trackPlayerMountCell',
   OnActorDeath = 'onMountDied',
   OnPlayerAuthentified = 'cleanUpMountOnLogin',
+  OnObjectHit = 'dismountOnHit'
 } do localRegisterThing
   {
     registrar = RegisterHandler,
