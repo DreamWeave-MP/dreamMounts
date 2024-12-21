@@ -553,6 +553,7 @@ function DreamMountFunctions:despawnBagRef(player)
                     self:getContainerRecordId(player),
                     containerIndex,
                     player.name))
+    player:QuickSaveToDrive()
 end
 
 function DreamMountFunctions:activateCurrentMountContainer(player)
@@ -653,6 +654,7 @@ function DreamMountFunctions:despawnMountSummon(player)
 
         currentSummons[mountName] = nil
     end
+    player:QuicksaveToDrive()
 
     if MountRefs[summonRef] then MountRefs[summonRef] = nil end
 end
@@ -674,6 +676,7 @@ local function spawnMountSummon(player, summonId)
     customVariables[DreamMountSummonRefNumKey] = summonIndex
     customVariables[DreamMountSummonCellKey] = playerCell
     MountRefs[summonIndex] = player.name
+    player:QuicksaveToDrive()
 end
 
 --- Remove and if necessary, re-add the relevant mount buff for the player
@@ -719,6 +722,7 @@ function DreamMountFunctions:clearCustomVariables(player)
     } do
         customVariables[variableId] = nil
     end
+    player:QuicksaveToDrive()
 end
 
 local function clearCustomVarsForPlayer(player)
@@ -822,6 +826,7 @@ local function saveContainerData(containerSaveData)
     local containerData = inventoryData[containerId]
     containerData.index = containerIndex
     containerData.cell = containerCell
+    player:QuicksaveToDrive()
 end
 
 function DreamMountFunctions:getCurrentContainerData(player)
@@ -1288,6 +1293,7 @@ function DreamMountFunctions:setPreferredMount(_, pid, idGui, data)
     dismountIfMounted(player)
 
     customVariables[DreamMountPreferredMountKey] = selectedMountIndex
+    player:QuicksaveToDrive()
 end
 
 function DreamMountFunctions:showPreferredMountMenu(pid, _)
@@ -1531,6 +1537,7 @@ function DreamMountFunctions.trackPlayerMountCell(_, _, pid, _)
         local uniqueIndex = GetActorRefNum(actorIndex) .. "-" .. GetActorMpNum(actorIndex)
         if uniqueIndex == customVariables[DreamMountSummonRefNumKey] then
             customVariables[DreamMountSummonCellKey] = GetActorCell(actorIndex)
+            player:QuicksaveToDrive()
         end
     end
 end
