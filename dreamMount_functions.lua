@@ -25,6 +25,7 @@ local GetActorRefNum = tes3mp.GetActorRefNum
 local GetCell = tes3mp.GetCell
 local ListBox = tes3mp.ListBox
 local Load = jsonInterface.load
+local MessageBox = tes3mp.MessageBox
 local ReadReceivedActorList = tes3mp.ReadReceivedActorList
 local RemoveClosestItem = inventoryHelper.removeClosestItem
 local RunConsoleCommandOnObject = logicHandler.RunConsoleCommandOnObject
@@ -338,6 +339,10 @@ local DreamMountConfigDefault = {
 ---@type table <string, boolean>
 local KeyRecords = {}
 
+--- Stores a map of mount refNums to their owners for the purpose of UI messages
+---@type table <string, string>
+local MountRefs = {}
+
 ---@alias MountIndex integer
 
 ---@class MountMerchantConfig
@@ -648,6 +653,8 @@ function DreamMountFunctions:despawnMountSummon(player)
 
         currentSummons[mountName] = nil
     end
+
+    if MountRefs[summonRef] then MountRefs[summonRef] = nil end
 end
 
 --- Place the appropriate summon at the player's location,
@@ -666,6 +673,7 @@ local function spawnMountSummon(player, summonId)
 
     customVariables[DreamMountSummonRefNumKey] = summonIndex
     customVariables[DreamMountSummonCellKey] = playerCell
+    MountRefs[summonIndex] = player.name
 end
 
 --- Remove and if necessary, re-add the relevant mount buff for the player
@@ -1556,16 +1564,17 @@ end
 function DreamMountFunctions.handleMountActivation(_, _, _, cellDescription, objects, _)
     local firstIndex, firstObject = next(objects)
     local activatingPlayer = Players[firstObject.activatingPid]
+    local activatingName = activatingPlayer.name
     local mountRefNum = activatingPlayer.data.customVariables[DreamMountSummonRefNumKey]
+    local owningPlayer = MountRefs[firstIndex]
 
-    -- Logic here is faulty. Below can say if we didn't activate our mount
-    -- but doesn't express whether the activated thing was a mount at all
-    -- so you get false positives doing totally normal things like opening doors.
-    --return tes3mp.MessageBox(activatingPlayer.pid, -1, DreamMountUnownedMountActivateStr)
-    if not mountRefNum or mountRefNum ~= firstIndex then return end
+    if not mountRefNum then return
+    elseif owningPlayer and owningPlayer ~= activatingName then
+        return MessageBox(activatingPlayer.pid, -1, DreamMountUnownedMountActivateStr)
+    end
 
     mountLog(Format("%s activated their mount %s with index %s in cell %s",
-                 activatingPlayer.name,
+                 activatingName,
                  firstObject.refId,
                  firstIndex,
                  cellDescription))
