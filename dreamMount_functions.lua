@@ -1321,6 +1321,7 @@ function DreamMountFunctions.defaultMountConfig(_, pid)
     if not DreamMountFunctions.validateUser(pid) then return end
 
     SlowSave(DreamMountConfigPath, DreamMountConfigDefault)
+    SlowSave(DreamMerchantConfigPath, DreamMountMerchantsDefault)
 
     SendMessage(pid, DreamMountDefaultConfigSavedString, false)
 end
