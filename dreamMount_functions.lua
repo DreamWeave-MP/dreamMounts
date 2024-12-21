@@ -276,6 +276,8 @@ local DreamMountConfigDefault = {
             chopMinDmgPct = 0.40,
             slashMinDmgPct = 0.40,
             thrustMinDmgPct = 0.40,
+        },
+        containerData = {
             carryCapacityBase = 30,
             carryCapacityPerStrength = 1.25,
         }
@@ -1433,9 +1435,9 @@ function DreamMountFunctions:getPlayerMountSummon(player)
     return Format("%s_%s_%s_pet", playerName, mountRefNum, mountData.name):lower()
 end
 
-function DreamMountFunctions:createContainerRecord(petRecordInput)
-    local player = petRecordInput.player
-    local playerPetData = petRecordInput.playerPetData
+function DreamMountFunctions:createContainerRecord(containerRecordInput)
+    local player = containerRecordInput.player
+    local containerData = containerRecordInput.containerData
 
     ClearRecords()
     SetRecordType(ContainerRecordType)
@@ -1446,7 +1448,7 @@ function DreamMountFunctions:createContainerRecord(petRecordInput)
     local playerStrength = player.data.attributes.Strength.base
     local containerRecord = {
         name = self:getPlayerPetName(player),
-        weight = playerPetData.carryCapacityBase + ( playerStrength * playerPetData.carryCapacityPerStrength ),
+        weight = containerData.carryCapacityBase + ( playerStrength * containerData.carryCapacityPerStrength ),
     }
 
     containerRecords[containerId] = containerRecord
@@ -1491,7 +1493,7 @@ function DreamMountFunctions:summonCreatureMount(pid, _)
     self:createContainerRecord {
         player = player,
         mountName = mountName,
-        playerPetData = mountData.petData
+        containerData = mountData.containerData
     }
 
     createPetRecord {
