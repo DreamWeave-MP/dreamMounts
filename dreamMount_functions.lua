@@ -65,6 +65,7 @@ local MountSlotMap = {
 -- Paths
 local DefaultKeyName = "Reins"
 local DreamMountConfigPath = 'custom/dreamMountConfig.json'
+local DreamMerchantConfigPath = 'custom/dreamMountMerchants.json'
 local GuarMountFilePathStr = 'rot/anim/%s.nif'
 
 -- UI Messages
@@ -327,7 +328,7 @@ local KeyRecords = {}
 ---@field selection MountIndex[] Set of mounts which this merchant sells. Uses numeric indices of the mountConfig table. It's up to you not to screw this up.
 
 ---@type table <string, MountMerchantConfig>
-local DreamMountMerchants = {
+local DreamMountMerchantsDefault = {
     -- Seyda Neen
     ["arrille"] = {
         capacity = 3,
@@ -430,7 +431,8 @@ local KeyItemTemplate = {
 }
 
 local DreamMountFunctions = {
-    MountConfig = {}
+    mountConfig = {},
+    mountMerchants = {},
 }
 
 local function mountLog(message)
@@ -745,7 +747,7 @@ function DreamMountFunctions:reloadMountMerchants(_, _, cellDescription, objects
     local actorIndex, actor = next(objects)
 
     if actor.dialogueChoiceType ~= BarterDialogue then return end
-    local expectedKeys = DreamMountMerchants[actor.refId]
+    local expectedKeys = self.mountMerchants[actor.refId]
     if not expectedKeys then return end
 
     local cell = LoadedCells[cellDescription]
@@ -962,8 +964,12 @@ function DreamMountFunctions:loadMountConfig()
     if self.mountConfig == DreamMountConfigDefault then
         Save(DreamMountConfigPath, self.mountConfig)
     end
+    assert(#self.mountConfig >= 1, 'Empty mount config found on reload!\n' .. Traceback(3))
 
-    assert(#self.mountConfig >= 1, 'Empty config found on reload!\n' .. Traceback(3))
+    self.mountMerchants = Load(DreamMerchantConfigPath) or DreamMountMerchantsDefault
+    if self.mountMerchants == DreamMountMerchantsDefault then
+        Save(DreamMerchantConfigPath, self.mountMerchants)
+    end
 end
 
 function DreamMountFunctions:clearCustomVariablesCommand(pid, cmd)
