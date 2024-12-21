@@ -703,12 +703,14 @@ end
 function DreamMountFunctions:getContainerRecordId(player)
     assert(player and player:IsLoggedIn(), Traceback(3))
     local mountName = self:getPlayerMountName(player)
+    if not mountName then return end
     return Format("%s_%s_container", player.name, mountName):lower()
 end
 
 function DreamMountFunctions:getPlayerPetName(player)
     assert(player and player:IsLoggedIn(), Traceback(3))
     local mountName = self:getPlayerMountName(player)
+    if not mountName then return end
     return Format("%s's %s", player.name, mountName)
 end
 
