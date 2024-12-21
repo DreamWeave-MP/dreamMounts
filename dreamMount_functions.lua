@@ -19,6 +19,7 @@ local GetActorMpNum = tes3mp.GetActorMpNum
 local GetActorRefNum = tes3mp.GetActorRefNum
 local ListBox = tes3mp.ListBox
 local Load = jsonInterface.load
+local LoadCellForPlayer = logicHandler.LoadCellForPlayer
 local ReadReceivedActorList = tes3mp.ReadReceivedActorList
 local RemoveClosestItem = inventoryHelper.removeClosestItem
 local RunConsoleCommandOnPlayer = logicHandler.RunConsoleCommandOnPlayer
@@ -30,6 +31,7 @@ local SendRecordDynamic = tes3mp.SendRecordDynamic
 local SetAIForActor = logicHandler.SetAIForActor
 local SetRecordType = tes3mp.SetRecordType
 local SlowSave = jsonInterface.save
+local UnloadCellForPlayer = logicHandler.UnloadCellForPlayer
 
 --TES3MP Globals
 local AddToInventory = enumerations.inventory.ADD
@@ -501,6 +503,7 @@ end
 ---@param player JSONPlayer
 local function despawnMountSummon(player)
     assert(player, DreamMountDespawnNoPlayerErr .. Traceback(3))
+    local pid = player.pid
 
     local customVariables = player.data.customVariables
     local summonRef = customVariables[DreamMountSummonRefNumKey]
@@ -512,6 +515,12 @@ local function despawnMountSummon(player)
     if not mountData or not preferredMount then return end
 
     local mountName = mountData.name
+
+    local unload = false
+    if not LoadedCells[summonCell] then
+        LoadCellForPlayer(pid, summonCell)
+        unload = true
+    end
 
     DeleteObjectForEveryone(summonCell, summonRef)
     LoadedCells[summonCell]:DeleteObjectData(summonRef)
@@ -532,6 +541,8 @@ local function despawnMountSummon(player)
 
         currentSummons[mountName] = nil
     end
+
+    if unload then UnloadCellForPlayer(pid, summonCell) end
 end
 
 --- Place the appropriate summon at the player's location,
