@@ -698,6 +698,25 @@ local function createPetRecord(petRecordInput)
     SendRecordDynamic(player.pid, true)
 end
 
+local function getContainerRecordId(player)
+    assert(player and player:IsLoggedIn(), Traceback(3))
+    local mountName = DreamMountFunctions:getPlayerMountName(player)
+    return Format("%s_%s_container", player.name, mountName):lower()
+end
+
+local function getPlayerPetName(player)
+    assert(player and player:IsLoggedIn(), Traceback(3))
+    local mountName = DreamMountFunctions:getPlayerMountName(player)
+    return Format("%s's %s", player.name, mountName)
+end
+
+function DreamMountFunctions:getPlayerMountName(player)
+    assert(player and player:IsLoggedIn(), Traceback(3))
+    local preferredMount = player.data.customVariables[DreamMountPreferredMountKey]
+    local mountData = self.mountConfig[preferredMount]
+    return mountData and mountData.name
+end
+
 function DreamMountFunctions:handleMountActivateMenu(pid, activateMenuChoice)
     activateMenuChoice = tonumber(activateMenuChoice)
     local player = Players[pid]
@@ -1149,7 +1168,6 @@ end
 
 function DreamMountFunctions.createContainerRecord(petRecordInput)
     local player = petRecordInput.player
-    local mountName = petRecordInput.mountName
     local playerPetData = petRecordInput.playerPetData
 
     ClearRecords()
@@ -1157,10 +1175,10 @@ function DreamMountFunctions.createContainerRecord(petRecordInput)
     local containerRecordStore = RecordStores["container"]
     local containerRecords = containerRecordStore.data.permanentRecords
 
-    local containerId = Format("%s_%s_container", player.name, mountName):lower()
+    local containerId = getContainerRecordId(player)
     local playerStrength = player.data.attributes.Strength.base
     local containerRecord = {
-        name = Format("%s's %s", player.name, mountName),
+        name = getPlayerPetName(player),
         weight = playerPetData.carryCapacityBase + ( playerStrength * playerPetData.carryCapacityPerStrength )
     }
 
