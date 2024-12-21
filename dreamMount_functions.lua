@@ -13,8 +13,13 @@ local ClearRecords = tes3mp.ClearRecords
 local ContainsItem = inventoryHelper.containsItem
 local CreateObjectAtPlayer = logicHandler.CreateObjectAtPlayer
 local DeleteObjectForEveryone = logicHandler.DeleteObjectForEveryone
+local GetActorCell = tes3mp.GetActorCell
+local GetActorListSize = tes3mp.GetActorListSize
+local GetActorMpNum = tes3mp.GetActorMpNum
+local GetActorRefNum = tes3mp.GetActorRefNum
 local ListBox = tes3mp.ListBox
 local Load = jsonInterface.load
+local ReadReceivedActorList = tes3mp.ReadReceivedActorList
 local RemoveClosestItem = inventoryHelper.removeClosestItem
 local RunConsoleCommandOnPlayer = logicHandler.RunConsoleCommandOnPlayer
 local Save = jsonInterface.quicksave
@@ -1158,12 +1163,25 @@ function DreamMountFunctions:trackPlayerMountCell(_, pid, _)
     if not player or not player:IsLoggedIn() then return end
     local customVariables = player.data.customVariables
 
-    tes3mp.ReadReceivedActorList()
-
-    for actorIndex = 0, tes3mp.GetActorListSize() - 1 do
-        local uniqueIndex = tes3mp.GetActorRefNum(actorIndex) .. "-" .. tes3mp.GetActorMpNum(actorIndex)
+    ReadReceivedActorList()
+    for actorIndex = 0, GetActorListSize() - 1 do
+        local uniqueIndex = GetActorRefNum(actorIndex) .. "-" .. GetActorMpNum(actorIndex)
         if uniqueIndex == customVariables[DreamMountSummonRefNumKey] then
-            customVariables[DreamMountSummonCellKey] = tes3mp.GetActorCell(actorIndex)
+            customVariables[DreamMountSummonCellKey] = GetActorCell(actorIndex)
+        end
+    end
+end
+
+function DreamMountFunctions:onMountDied(_, pid, _)
+    local player = Players[pid]
+    if not player or not player:IsLoggedIn() then return end
+    local customVariables = player.data.customVariables
+
+    ReadReceivedActorList()
+    for actorIndex = 0, GetActorListSize() - 1 do
+        local uniqueIndex = GetActorRefNum(actorIndex) .. "-" .. GetActorMpNum(actorIndex)
+        if uniqueIndex == customVariables[DreamMountSummonRefNumKey] then
+            despawnMountSummon(player)
         end
     end
 end
