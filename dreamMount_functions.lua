@@ -1546,6 +1546,7 @@ end
 function DreamMountFunctions:cleanUpMountOnLogin(_, pid)
     local player = Players[pid]
     assert(player, DreamMountUnloggedPlayerSummonErr .. '\n' .. Traceback(3))
+    self:despawnBagRef(player)
     self:despawnMountSummon(player)
     dismountIfMounted(player)
 end
