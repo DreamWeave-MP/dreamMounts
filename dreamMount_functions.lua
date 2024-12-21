@@ -1565,9 +1565,15 @@ function DreamMountFunctions:onMountDied(_, pid, _)
 
     ReadReceivedActorList()
     for actorIndex = 0, GetActorListSize() - 1 do
-        local uniqueIndex = GetActorRefNum(actorIndex) .. "-" .. GetActorMpNum(actorIndex)
-        if uniqueIndex == customVariables[DreamMountSummonRefNumKey] then
+        local summonUniqueIndex = actorPacketUniqueIndex(actorIndex)
+        if summonUniqueIndex == customVariables[DreamMountSummonRefNumKey] then
             self:despawnMountSummon(player)
+        -- Somebody's mount died, but it wasn't ours.
+        -- Despawn the mount and remove it from local tracking.
+        elseif MountRefs[summonUniqueIndex] then
+            local summonCell = GetActorCell(actorIndex)
+            DeleteObjectForEveryone(summonCell, summonUniqueIndex)
+            MountRefs[summonUniqueIndex] = nil
         end
     end
 end
