@@ -955,6 +955,9 @@ end
 
 function DreamMountFunctions:loadMountConfig()
     self.mountConfig = Load(DreamMountConfigPath) or DreamMountConfigDefault
+    mountLog("---------------MOUNT CONFIG---------------")
+    tableHelper.print(self.mountConfig)
+    mountLog("---------------MOUNT CONFIG---------------")
 
     if self.mountConfig == DreamMountConfigDefault then
         Save(DreamMountConfigPath, self.mountConfig)
