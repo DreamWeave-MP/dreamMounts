@@ -167,6 +167,7 @@ for eventName, callbackName in pairs {
   OnObjectDialogueChoice = 'reloadMountMerchants',
   OnActorCellChange = 'trackPlayerMountCell',
   OnActorDeath = 'onMountDied',
+  OnPlayerAuthentified = 'cleanUpMountOnLogin',
 } do localRegisterThing
   {
     registrar = RegisterHandler,

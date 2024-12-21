@@ -1163,7 +1163,9 @@ function DreamMountFunctions:getMountSpellNameString(mountIndex)
     return Format(DreamMountSpellNameTemplate, self.mountConfig[mountIndex].name)
 end
 
-function DreamMountFunctions:trackPlayerMountCell(_, pid, _)
+-- Include an extra unused param on table functions which don't actually use self,
+-- since they'll be called with self as an argument whether we want them to or not
+function DreamMountFunctions.trackPlayerMountCell(_, _, pid, _)
     local player = Players[pid]
     if not player or not player:IsLoggedIn() then return end
     local customVariables = player.data.customVariables
@@ -1177,7 +1179,7 @@ function DreamMountFunctions:trackPlayerMountCell(_, pid, _)
     end
 end
 
-function DreamMountFunctions:onMountDied(_, pid, _)
+function DreamMountFunctions.onMountDied(_, _, pid, _)
     local player = Players[pid]
     if not player or not player:IsLoggedIn() then return end
     local customVariables = player.data.customVariables
@@ -1189,6 +1191,13 @@ function DreamMountFunctions:onMountDied(_, pid, _)
             despawnMountSummon(player)
         end
     end
+end
+
+function DreamMountFunctions.cleanUpMountOnLogin(_, _, pid)
+    local player = Players[pid]
+    assert(player, DreamMountUnloggedPlayerSummonErr .. '\n' .. Traceback(3))
+    despawnMountSummon(player)
+    dismountIfMounted(player)
 end
 
 return DreamMountFunctions
