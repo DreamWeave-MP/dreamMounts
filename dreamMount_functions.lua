@@ -36,6 +36,7 @@ local SlowSave = jsonInterface.save
 local AddToInventory = enumerations.inventory.ADD
 local AIFollow = enumerations.ai.FOLLOW
 local CreatureRecordType = enumerations.recordType.CREATURE
+local EquipEnums = enumerations.equipment
 local FortifyAttribute = enumerations.effects.FORTIFY_ATTRIBUTE
 local RemoveFromInventory = enumerations.inventory.REMOVE
 local RestoreFatigue = enumerations.effects.RESTORE_FATIGUE
@@ -798,7 +799,7 @@ function DreamMountFunctions:toggleMount(player)
         local mountName = mount.name
         local mountType = mount.mountType or ShirtMountType
         local mountSlot = MountSlotMap[mountType]
-        local mappedEquipSlot = enumerations.equipment[mountSlot]
+        local mappedEquipSlot = EquipEnums[mountSlot]
 
         customVariables[DreamMountSummonWasEnabledKey] = customVariables[DreamMountSummonRefNumKey] ~= nil
         despawnMountSummon(player)
