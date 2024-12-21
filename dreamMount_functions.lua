@@ -69,6 +69,7 @@ local DreamMountDefaultConfigSavedString =
     , color.MediumBlue, color.Green, DreamMountConfigPath)
 local DreamMountNoPreferredMountStr = Format('%sdoes not have a preferred mount set!\n' , color.Red)
 local DreamMountNoMountAvailableStr = Format('%sYou do not have any mounts available! Seek one out in the world . . .\n', color.Maroon)
+local DreamMountNotAPetStr = "%s%s cannot be used as a pet!"
 local DreamMountResetVarsString = Format('%sReset DreamMount variables for %s'
 , color.MediumBlue, color.Green)
 local DreamMountPreferredMountString = 'Select your preferred mount.'
@@ -1100,6 +1101,9 @@ function DreamMountFunctions:summonCreatureMount(pid, _)
 
     local mountData = self.mountConfig[preferredMount]
     local mountName = mountData.name
+    if not mountData.petData then
+        return player:Message(Format(DreamMountNotAPetStr, color.Red, mountName))
+    end
 
     despawnMountSummon(player)
 
