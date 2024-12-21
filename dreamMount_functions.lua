@@ -7,11 +7,14 @@ local Format = string.format
 local Traceback = debug.traceback
 
 -- TES3MP Functions
+local AddContainerItem = tes3mp.AddContainerItem
 local AddContainerRecord = packetBuilder.AddContainerRecord
 local AddCreatureRecord = packetBuilder.AddCreatureRecord
 local AddItem = inventoryHelper.addItem
+local AddObject = tes3mp.AddObject
 local AddRecordTypeToPacket = packetBuilder.AddRecordByType
 local BuildObjectData = dataTableBuilder.BuildObjectData
+local ClearObjectList = tes3mp.ClearObjectList
 local ClearRecords = tes3mp.ClearRecords
 local ContainsItem = inventoryHelper.containsItem
 local CreateObjectAtPlayer = logicHandler.CreateObjectAtPlayer
@@ -20,6 +23,7 @@ local GetActorCell = tes3mp.GetActorCell
 local GetActorListSize = tes3mp.GetActorListSize
 local GetActorMpNum = tes3mp.GetActorMpNum
 local GetActorRefNum = tes3mp.GetActorRefNum
+local GetCell = tes3mp.GetCell
 local ListBox = tes3mp.ListBox
 local Load = jsonInterface.load
 local ReadReceivedActorList = tes3mp.ReadReceivedActorList
@@ -29,7 +33,19 @@ local RunConsoleCommandOnPlayer = logicHandler.RunConsoleCommandOnPlayer
 local Save = jsonInterface.quicksave
 local SendBaseInfo = tes3mp.SendBaseInfo
 local SendMessage = tes3mp.SendMessage
+local SetContainerItemCharge = tes3mp.SetContainerItemCharge
+local SetContainerItemCount = tes3mp.SetContainerItemCount
+local SetContainerItemEnchantmentCharge = tes3mp.SetContainerItemEnchantmentCharge
+local SetContainerItemRefId = tes3mp.SetContainerItemRefId
+local SetContainerItemSoul = tes3mp.SetContainerItemSoul
 local SetModel = tes3mp.SetModel
+local SetObjectListAction = tes3mp.SetObjectListAction
+local SetObjectListCell = tes3mp.SetObjectListCell
+local SetObjectListPid = tes3mp.SetObjectListPid
+local SetObjectMpNum = tes3mp.SetObjectMpNum
+local SetObjectRefId = tes3mp.SetObjectRefId
+local SetObjectRefNum = tes3mp.SetObjectRefNum
+local SendContainer = tes3mp.SendContainer
 local SendRecordDynamic = tes3mp.SendRecordDynamic
 local SetAIForActor = logicHandler.SetAIForActor
 local SetRecordType = tes3mp.SetRecordType
@@ -40,6 +56,7 @@ local AddToInventory = enumerations.inventory.ADD
 local AIFollow = enumerations.ai.FOLLOW
 local BarterDialogue = enumerations.dialogueChoice.BARTER
 local ContainerRecordType = enumerations.recordType.CONTAINER
+local ContainerSet = enumerations.container.SET
 local CreatureRecordType = enumerations.recordType.CREATURE
 local EquipEnums = enumerations.equipment
 local FortifyAttribute = enumerations.effects.FORTIFY_ATTRIBUTE
@@ -561,6 +578,45 @@ function DreamMountFunctions:activateCurrentMountContainer(player)
     tes3mp.SendObjectActivate()
 end
 
+function DreamMountFunctions:updateCurrentMountContainer(player)
+    local containerData = self:getCurrentContainerData(player)
+    local containerId = self:getContainerRecordId(player)
+    if not containerData or not containerId then return end
+    local pid = player.pid
+    local playerCellId = GetCell(pid)
+    local playerCell = LoadedCells[playerCellId]
+
+    local cellObjectData = playerCell.data.objectData
+    local containerIndex = table.concat(containerData.index, '-')
+
+    cellObjectData[containerIndex].inventory = containerData.inventory
+    -- Make another function (or use this one) which actually
+    -- sends a packet containing the relevant inventory contents!
+    -- For now we just want to see the items appear in JSON.
+    ClearObjectList(pid)
+    SetObjectListPid(pid)
+    SetObjectListCell(playerCellId)
+    SetObjectRefNum(containerData.index[1])
+    SetObjectMpNum(containerData.index[2])
+    SetObjectRefId(containerId)
+
+    for _, item in ipairs(containerData.inventory) do
+        assert(item.refId and item.refId ~= '',
+               "Found null or empty refId during inventory iteration!\n" .. Traceback(3))
+
+        SetContainerItemRefId(item.refId)
+        SetContainerItemCount(item.count or 1)
+        SetContainerItemCharge(item.charge or -1)
+        SetContainerItemEnchantmentCharge(item.enchantmentCharge or -1)
+        SetContainerItemSoul(item.soul or '')
+        AddContainerItem()
+    end
+
+    AddObject()
+    SetObjectListAction(ContainerSet)
+    SendContainer(false, false)
+end
+
 --- Destroys the player's summoned pet, if one exists.
 --- This method also destroys the associated creature record, since current impl would
 --- otherwide be really spammy.
@@ -796,7 +852,7 @@ function DreamMountFunctions:getPlayerMountName(player)
     return mountData and mountData.name
 end
 
-function DreamMountFunctions.sendContainerPacket(containerPacket)
+function DreamMountFunctions.sendContainerPlacePacket(containerPacket)
 ---@diagnostic disable-next-line: deprecated
 	local pid, splitIndex, targetContainer, targetObject = unpack(containerPacket)
 
@@ -806,7 +862,6 @@ function DreamMountFunctions.sendContainerPacket(containerPacket)
 
 	tes3mp.SetObjectRefNum(splitIndex[1])
 	tes3mp.SetObjectMpNum(splitIndex[2])
-
 	tes3mp.SetObjectRefId(targetContainer)
 
 	local location = targetObject.location
@@ -866,7 +921,6 @@ function DreamMountFunctions:createContainerServerside(player)
 	tes3mp.SetCurrentMpNum(mpNum)
 
     local splitIndex = uniqueIndex:split('-')
-
     saveContainerData {
         player,
         targetContainer,
@@ -891,7 +945,8 @@ function DreamMountFunctions:handleMountActivateMenu(pid, activateMenuChoice)
 
     if activateMenuChoice == 0 then
         self:despawnBagRef(player)
-        self.sendContainerPacket(self:createContainerServerside(player))
+        self.sendContainerPlacePacket(self:createContainerServerside(player))
+        self:updateCurrentMountContainer(player)
         self:activateCurrentMountContainer(player)
     elseif activateMenuChoice == 1 then
         mountLog(Format("%s dismissed their mount!", player.name))
@@ -1224,6 +1279,7 @@ function DreamMountFunctions:setPreferredMount(_, pid, idGui, data)
     end
 
     self:despawnMountSummon(player)
+    self:despawnBagRef(player)
     dismountIfMounted(player)
 
     customVariables[DreamMountPreferredMountKey] = selectedMountIndex
