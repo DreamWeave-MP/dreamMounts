@@ -1,4 +1,3 @@
---- Handle Activation to dismiss the companion or open its container
 --- Make automatically re-enabling the companion opt-out
 
 -- STL Functions
@@ -1556,7 +1555,7 @@ function DreamMountFunctions.dismountOnHit(_, _, _, _, _, targetPlayers)
     end
 end
 
-customEventHooks.registerHandler("OnObjectActivate", function(_, _, cellDescription, objects, _)
+function DreamMountFunctions.handleMountActivation(_, _, _, cellDescription, objects, _)
     local firstIndex, firstObject = next(objects)
     local activatingPlayer = Players[firstObject.activatingPid]
     local mountRefNum = activatingPlayer.data.customVariables[DreamMountSummonRefNumKey]
@@ -1576,6 +1575,6 @@ customEventHooks.registerHandler("OnObjectActivate", function(_, _, cellDescript
     activatingPlayer:MessageBox(DreamMountsMountActivateGUIID,
                                 "What would you like to do with your mount?",
                                 "Open Pack;Dismiss;Pet;Nothing")
-end)
+end
 
 return DreamMountFunctions
