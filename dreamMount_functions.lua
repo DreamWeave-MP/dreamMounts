@@ -557,6 +557,7 @@ end
 function DreamMountFunctions:addMountSpellEffect(mountIndex, effects, permanentSpells)
     local mountSpellRecordId = self:getMountSpellIdString(mountIndex)
     local mountSpell = {
+        name = self:getMountSpellNameString(mountIndex),
         effects = effects,
         subtype = 1,
     }
@@ -1531,17 +1532,6 @@ function DreamMountFunctions:initMountData()
     self:createMountSpells(firstPlayer)
     self:createKeyRecords(firstPlayer)
     createScriptRecords()
-end
-
-function DreamMountFunctions:getMountEffect(effectTable, mountIndex)
-    return self:getMountSpellIdString(mountIndex),
-        {
-            name = self:getMountSpellNameString(mountIndex),
-            subtype = 1,
-            cost = 0,
-            flags = 0,
-            effects = effectTable
-        }
 end
 
 ---@param mountIndex integer
