@@ -31,7 +31,6 @@ local SendRecordDynamic = tes3mp.SendRecordDynamic
 local SetAIForActor = logicHandler.SetAIForActor
 local SetRecordType = tes3mp.SetRecordType
 local SlowSave = jsonInterface.save
-local UnloadCellForPlayer = logicHandler.UnloadCellForPlayer
 
 --TES3MP Globals
 local AddToInventory = enumerations.inventory.ADD
@@ -494,8 +493,12 @@ local function unauthorizedUserMessage(pid)
     SendMessage(pid, DreamMountUnauthorizedUserMessage, false)
 end
 
--- Couple cases we're not yet handling
--- What if the reference has already been deleted?
+local function dismountIfMounted(player)
+    if player.data.customVariables[DreamMountEnabledKey] then
+        DreamMountFunctions:toggleMount(player)
+    end
+end
+
 --- Destroys the player's summoned pet, if one exists.
 --- This method also destroys the associated creature record, since current impl would
 --- otherwide be really spammy.
@@ -578,9 +581,7 @@ local function clearCustomVariables(player)
     -- De-summon summons
     despawnMountSummon(player)
     -- Dismount if necessary
-    if customVariables[DreamMountEnabledKey] then
-        DreamMountFunctions:toggleMount(player)
-    end
+    dismountIfMounted(player)
     -- Remove any applicable spells
     resetMountSpellForPlayer(player)
 
