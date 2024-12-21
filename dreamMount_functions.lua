@@ -960,6 +960,13 @@ function DreamMountFunctions:createContainerServerside(player)
     }
 end
 
+function DreamMountFunctions:activateMountContainer(player)
+    self:despawnBagRef(player)
+    self.sendContainerPlacePacket(self:createContainerServerside(player))
+    self:updateCurrentMountContainer(player)
+    self:activateCurrentMountContainer(player)
+end
+
 function DreamMountFunctions:handleMountActivateMenu(pid, activateMenuChoice)
     activateMenuChoice = tonumber(activateMenuChoice)
     local player = Players[pid]
@@ -968,10 +975,7 @@ function DreamMountFunctions:handleMountActivateMenu(pid, activateMenuChoice)
     assert(player and player:IsLoggedIn(), "Don't feel like writing another error message!")
 
     if activateMenuChoice == 0 then
-        self:despawnBagRef(player)
-        self.sendContainerPlacePacket(self:createContainerServerside(player))
-        self:updateCurrentMountContainer(player)
-        self:activateCurrentMountContainer(player)
+        self:activateMountContainer(player)
     elseif activateMenuChoice == 1 then
         mountLog(Format("%s dismissed their mount!", player.name))
         self:despawnMountSummon(player)
