@@ -898,11 +898,10 @@ function DreamMountFunctions:loadMountConfig()
 end
 
 function DreamMountFunctions.clearCustomVariablesCommand(_, pid, cmd)
-    if not DreamMountFunctions.validateUser(pid) then return end
-
     local targetPlayer = cmd[2] and Players[tonumber(cmd[2])]
     if targetPlayer then
         if not targetPlayer:IsLoggedIn() then return end
+        if targetPlayer ~= pid and not DreamMountFunctions.validateUser(pid) then return end
         clearCustomVariables(targetPlayer)
         SendMessage(pid
                     , Format(DreamMountSingleVarResetPattern
