@@ -774,9 +774,9 @@ function DreamMountFunctions:createMountMenuString(player)
         end
     end
 
-    if DreamMountListString == DreamMountDefaultListString then return end
-
-    return DreamMountListString
+    if DreamMountListString ~= DreamMountDefaultListString then
+        return DreamMountListString
+    end
 end
 
 function DreamMountFunctions:toggleMount(player)
