@@ -719,6 +719,83 @@ function DreamMountFunctions:getPlayerMountName(player)
     return mountData and mountData.name
 end
 
+function DreamMountFunctions.sendContainerPacket(containerPacket)
+---@diagnostic disable-next-line: deprecated
+	local pid, splitIndex, targetContainer, targetObject = unpack(containerPacket)
+
+	tes3mp.ClearObjectList()
+	tes3mp.SetObjectListPid(pid)
+	tes3mp.SetObjectListCell(tes3mp.GetCell(pid))
+
+	tes3mp.SetObjectRefNum(splitIndex[1])
+	tes3mp.SetObjectMpNum(splitIndex[2])
+
+	tes3mp.SetObjectRefId(targetContainer)
+
+	local location = targetObject.location
+	tes3mp.SetObjectPosition(location.posX, location.posY, location.posZ)
+	tes3mp.SetObjectRotation(location.rotX, location.rotY, location.rotZ)
+
+	tes3mp.SetObjectScale(targetObject.scale)
+
+	tes3mp.AddObject()
+
+	tes3mp.SendObjectPlace(false)
+	tes3mp.SendObjectScale(false)
+end
+
+function DreamMountFunctions:createContainerServerside(player)
+    local targetContainer = self:getContainerRecordId(player)
+    local pid = player.pid
+    local cellDescription = tes3mp.GetCell(pid)
+	local mpNum = WorldInstance:GetCurrentMpNum() + 1
+
+	local uniqueIndex =  0 .. "-" .. mpNum
+
+	local bagSpawnCell = LoadedCells[cellDescription]
+	assert(bagSpawnCell, "The cellDescription requested is not a loaded cell! This should never happen!\n"
+		   .. debug.traceback(3))
+
+	bagSpawnCell:InitializeObjectData(uniqueIndex, targetContainer)
+
+	local cellData = bagSpawnCell.data
+	local cellPackets = cellData.packets
+	local objectData = cellData.objectData
+    local targetObject = objectData[uniqueIndex]
+
+	assert(objectData[uniqueIndex], "Object data should have been initialized already, but it isn'! Bailing!\n"
+		   .. debug.traceback(3))
+
+    targetObject.location = {
+        posX = tes3mp.GetPosX(pid),
+        posY = tes3mp.GetPosY(pid),
+        posZ = -99999,
+        rotX = 0,
+        rotY = 0,
+        rotZ = 0
+    }
+
+	targetObject.scale = 0.0001
+
+	targetObject.inventory = {}
+
+	for _, packetType in ipairs { 'place', 'scale', 'container' } do
+		local packetTable = cellPackets[packetType]
+		packetTable[#packetTable + 1] = uniqueIndex
+	end
+
+	WorldInstance:SetCurrentMpNum(mpNum)
+
+	tes3mp.SetCurrentMpNum(mpNum)
+
+    return {
+        pid,
+        uniqueIndex:split("-"),
+        targetContainer,
+        targetObject
+    }
+end
+
 function DreamMountFunctions:handleMountActivateMenu(pid, activateMenuChoice)
     activateMenuChoice = tonumber(activateMenuChoice)
     local player = Players[pid]
@@ -727,7 +804,7 @@ function DreamMountFunctions:handleMountActivateMenu(pid, activateMenuChoice)
     assert(player and player:IsLoggedIn(), "Don't feel like writing another error message!")
 
     if activateMenuChoice == 0 then
-        return player:Message("Sucks to suck, this one's not implemented yet!")
+        self.sendContainerPacket(self:createContainerServerside(player))
     elseif activateMenuChoice == 1 then
         mountLog(Format("%s dismissed their mount!", player.name))
         self:despawnMountSummon(player)
