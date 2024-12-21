@@ -538,6 +538,29 @@ function DreamMountFunctions:despawnBagRef(player)
                     player.name))
 end
 
+function DreamMountFunctions:activateCurrentMountContainer(player)
+    local pid = player.pid
+    tes3mp.ClearObjectList()
+
+    tes3mp.SetObjectListPid(pid)
+
+    tes3mp.SetObjectListCell(tes3mp.GetCell(pid))
+
+    local containerData = self:getCurrentContainerData(player)
+    if not containerData then return end
+    local splitIndex = containerData.index
+
+    tes3mp.SetObjectRefNum(splitIndex[1])
+
+    tes3mp.SetObjectMpNum(splitIndex[2])
+
+    tes3mp.SetObjectActivatingPid(pid)
+
+    tes3mp.AddObject()
+
+    tes3mp.SendObjectActivate()
+end
+
 --- Destroys the player's summoned pet, if one exists.
 --- This method also destroys the associated creature record, since current impl would
 --- otherwide be really spammy.
@@ -869,6 +892,7 @@ function DreamMountFunctions:handleMountActivateMenu(pid, activateMenuChoice)
     if activateMenuChoice == 0 then
         self:despawnBagRef(player)
         self.sendContainerPacket(self:createContainerServerside(player))
+        self:activateCurrentMountContainer(player)
     elseif activateMenuChoice == 1 then
         mountLog(Format("%s dismissed their mount!", player.name))
         self:despawnMountSummon(player)
