@@ -158,6 +158,7 @@ local DreamMountPreferredMountKey = 'dreamMountPreferredMount'
 local DreamMountPrevItemId = 'dreamMountPreviousItemId'
 local DreamMountPrevMountTypeKey = 'dreamMountPreviousMountType'
 local DreamMountPrevSpellId = 'dreamMountPreviousSpellId'
+local DreamMountPrevAuraId = 'dreamMountPreviousAuraId'
 local DreamMountSummonRefNumKey = 'dreamMountSummonRefNum'
 local DreamMountSummonCellKey = 'dreamMountSummonCellDescription'
 local DreamMountSummonWasEnabledKey = 'dreamMountHadMountSummon'
@@ -276,6 +277,9 @@ local DreamMountConfigDefault = {
             chopMinDmgPct = 0.40,
             slashMinDmgPct = 0.40,
             thrustMinDmgPct = 0.40,
+            aura = {
+                fatigueRestore = 1,
+            },
         },
         containerData = {
             carryCapacityBase = 30,
@@ -518,10 +522,21 @@ local function buildSpellEffectString(mountSpellRecordId, mountSpell)
     return Concat(parts)
 end
 
+local AttributeNames = {
+    STRENGTH = 0,
+    INTELLIGENCE = 1,
+    WILLPOWER = 2,
+    AGILITY = 3,
+    SPEED = 4,
+    ENDURANCE = 5,
+    PERSONALITY = 6,
+    LUCK = 7,
+}
+
 local Effects = {
-    FortifyAttribute = function(magnitudeMin, magnitudeMax)
+    FortifyAttribute = function(attributeId, magnitudeMin, magnitudeMax)
         return {
-            attribute = 4,
+            attribute = attributeId,
             id = FortifyAttribute,
             rangeType = 0,
             magnitudeMin = magnitudeMin,
@@ -540,6 +555,29 @@ local Effects = {
     end,
 }
 
+local function getPetAuraStrings(mountData)
+    assert(mountData.name ~= nil and mountData.name ~= '', "All mounts must have a name!")
+    return Format("%s_aura", mountData.name):lower(), Format("%s Aura", mountData.name)
+end
+
+local function getPetAuraEffects(mountData)
+    if not mountData.petData or not mountData.petData.aura then return end
+    local petAuraData = mountData.petData.aura
+
+    local petEffects = {}
+
+    if petAuraData.speedBonus then
+        petEffects[#petEffects + 1] =
+            Effects.FortifyAttribute(AttributeNames.STRENGTH, petAuraData.speedBonus)
+    end
+
+    if petAuraData.fatigueRestore then
+        petEffects[#petEffects + 1] = Effects.RestoreFatigue(petAuraData.fatigueRestore)
+    end
+
+    if #petEffects > 0 then return petEffects end
+end
+
 local function getMountActiveEffects(mountData)
     local mountEffects = {}
 
@@ -554,20 +592,19 @@ local function getMountActiveEffects(mountData)
     if #mountEffects > 0 then return mountEffects end
 end
 
-function DreamMountFunctions:addMountSpellEffect(mountIndex, effects, permanentSpells)
-    local mountSpellRecordId = self:getMountSpellIdString(mountIndex)
+function DreamMountFunctions:addMountSpellEffect(effects, spellId, spellName, permanentSpells)
     local mountSpell = {
-        name = self:getMountSpellNameString(mountIndex),
+        name = spellName,
         effects = effects,
         subtype = 1,
     }
-    local spellString = buildSpellEffectString(mountSpellRecordId, mountSpell)
+    local spellString = buildSpellEffectString(spellId, mountSpell)
 
-    permanentSpells[mountSpellRecordId] = mountSpell
+    permanentSpells[spellId] = mountSpell
 
     mountLog(Format(DreamMountCreatedSpellRecordStr, spellString))
 
-    AddRecordTypeToPacket(mountSpellRecordId, mountSpell, 'spell')
+    AddRecordTypeToPacket(spellId, mountSpell, 'spell')
 end
 
 function DreamMountFunctions:getMountData(player)
@@ -657,6 +694,20 @@ function DreamMountFunctions:updateCurrentMountContainer(player)
     SendContainer(false, false)
 end
 
+local function toggleSpell(spell, player, spellRecords)
+    if not spellRecords then spellRecords = RecordStores['spell'].data.permanentRecords end
+
+    player:updateSpellbook {
+        [spell] = false,
+    }
+
+    if spellRecords[spell] then
+        player:updateSpellbook {
+            [spell] = true,
+        }
+    end
+end
+
 --- Destroys the player's summoned pet, if one exists.
 --- This method also destroys the associated creature record, since current impl would
 --- otherwide be really spammy.
@@ -677,6 +728,12 @@ function DreamMountFunctions:despawnMountSummon(player)
 
     DeleteObjectForEveryone(summonCell, summonRef)
 
+    local petAura = customVariables[DreamMountPrevAuraId]
+    if petAura then
+        toggleSpell(petAura, player)
+    end
+
+    customVariables[DreamMountPrevAuraId] = nil
     customVariables[DreamMountSummonRefNumKey] = nil
     customVariables[DreamMountSummonCellKey] = nil
 
@@ -715,21 +772,8 @@ local function spawnMountSummon(player, summonId)
     customVariables[DreamMountSummonRefNumKey] = summonIndex
     customVariables[DreamMountSummonCellKey] = playerCell
     MountRefs[summonIndex] = player.name
+
     player:QuicksaveToDrive()
-end
-
-local function toggleSpell(spell, player, spellRecords)
-    if not spellRecords then spellRecords = RecordStores['spell'].data.permanentRecords end
-
-    player:updateSpellbook {
-        [spell] = false,
-    }
-
-    if spellRecords[spell] then
-        player:updateSpellbook {
-            [spell] = true,
-        }
-    end
 end
 
 --- Remove and if necessary, re-add the relevant mount buff for the player
@@ -764,6 +808,7 @@ function DreamMountFunctions:clearCustomVariables(player)
         DreamMountSummonCellKey,
         DreamMountSummonWasEnabledKey,
         DreamMountCurrentSummonsKey,
+        DreamMountPrevAuraId,
     } do
         customVariables[variableId] = nil
     end
@@ -1413,10 +1458,22 @@ function DreamMountFunctions:createMountSpells(firstPlayer)
         local mountEffects = getMountActiveEffects(mountData)
 
         if mountEffects then
-            self:addMountSpellEffect(index, mountEffects, permanentSpells)
+            local spellName = self:getMountSpellNameString(index)
+            local spellId = self:getMountSpellIdString(index)
+            self:addMountSpellEffect(mountEffects, spellId, spellName, permanentSpells)
             spellsSaved = spellsSaved + 1
         else
             local removeSpellId = self:getMountSpellIdString(index)
+            permanentSpells[removeSpellId] = nil
+        end
+
+        local petEffects = getPetAuraEffects(mountData)
+        if petEffects then
+            local auraId, auraName = getPetAuraStrings(mountData)
+            -- local auraName = "Guara"
+            self:addMountSpellEffect(petEffects, auraId, auraName, permanentSpells)
+        else
+            local removeSpellId = getPetAuraStrings(mountData)
             permanentSpells[removeSpellId] = nil
         end
     end
@@ -1517,6 +1574,10 @@ function DreamMountFunctions:summonCreatureMount(pid, _)
     }
 
     spawnMountSummon(player, petId)
+
+    local auraId = getPetAuraStrings(mountData)
+    toggleSpell(auraId, player)
+    customVariables[DreamMountPrevAuraId] = auraId
 
     mountLog(Format(DreamMountMountSummonSpawnedStr,
                     mountName,
