@@ -602,6 +602,16 @@ local function clearCustomVariables(player)
     end
 end
 
+local function clearCustomVarsForPlayer(player)
+    if not player or not player:IsLoggedIn() then return end
+    clearCustomVariables(player)
+    SendMessage(player.pid,
+                Format(DreamMountSingleVarResetPattern
+                       , DreamMountResetVarsString
+                       , player.name)
+                , false)
+end
+
 local function buildSpellEffectString(mountSpellRecordId, mountSpell)
     local parts = {
         mountSpellRecordId,
@@ -899,16 +909,9 @@ end
 
 function DreamMountFunctions.clearCustomVariablesCommand(_, pid, cmd)
     local targetPlayer = cmd[2] and Players[tonumber(cmd[2])]
-    if targetPlayer then
-        if not targetPlayer:IsLoggedIn() then return end
-        if targetPlayer ~= pid and not DreamMountFunctions.validateUser(pid) then return end
-        clearCustomVariables(targetPlayer)
-        SendMessage(pid
-                    , Format(DreamMountSingleVarResetPattern
-                             , DreamMountResetVarsString
-                             , targetPlayer.name)
-                    , false)
-    else
+
+    if targetPlayer then clearCustomVarsForPlayer(targetPlayer)
+    elseif DreamMountFunctions.validateUser(pid) then
         local playersWhoReset = {}
         for index = 0, #Players do
             local player = Players[index]
@@ -920,6 +923,8 @@ function DreamMountFunctions.clearCustomVariablesCommand(_, pid, cmd)
                              , DreamMountResetVarsString
                              , Concat(playersWhoReset, ','))
                     , false)
+    else
+        clearCustomVarsForPlayer(Players[pid])
     end
 end
 
