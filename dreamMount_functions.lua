@@ -532,10 +532,6 @@ local function dismountIfMounted(player)
     end
 end
 
---- NOTE: I'm not dealing with it right now, BUT
---- We'll need to also run this as part of the other relevant state switching
---- when your preferred mount changes
---- Don't wanna leave old cell refs just laying around!
 function DreamMountFunctions:despawnBagRef(player)
     assert(player, DreamMountDespawnNoPlayerErr .. Traceback(3))
 
