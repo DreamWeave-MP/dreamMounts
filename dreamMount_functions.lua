@@ -7,6 +7,7 @@ local Format = string.format
 local Traceback = debug.traceback
 
 -- TES3MP Functions
+local AddContainerRecord = packetBuilder.AddContainerRecord
 local AddCreatureRecord = packetBuilder.AddCreatureRecord
 local AddItem = inventoryHelper.addItem
 local AddRecordTypeToPacket = packetBuilder.AddRecordByType
@@ -246,6 +247,8 @@ local DreamMountConfigDefault = {
             chopMinDmgPct = 0.40,
             slashMinDmgPct = 0.40,
             thrustMinDmgPct = 0.40,
+            carryCapacityBase = 50,
+            carryCapacityPerStrength = 3,
         }
     },
     -- 2
@@ -514,7 +517,7 @@ end
 --- This method also destroys the associated creature record, since current impl would
 --- otherwide be really spammy.
 ---@param player JSONPlayer
-local function despawnMountSummon(player)
+function DreamMountFunctions:despawnMountSummon(player)
     assert(player, DreamMountDespawnNoPlayerErr .. Traceback(3))
 
     local customVariables = player.data.customVariables
@@ -523,7 +526,7 @@ local function despawnMountSummon(player)
     if not summonRef and not summonCell then return end
 
     local preferredMount = customVariables[DreamMountPreferredMountKey]
-    local mountData = DreamMountFunctions.mountConfig[preferredMount]
+    local mountData = self.mountConfig[preferredMount]
     if not mountData or not preferredMount then return end
 
     local mountName = mountData.name
@@ -586,11 +589,11 @@ end
 
 --- Resets all DreamMount state for a given player
 ---@param player JSONPlayer
-local function clearCustomVariables(player)
+function DreamMountFunctions:clearCustomVariables(player)
     local customVariables = player.data.customVariables
 
     -- De-summon summons
-    despawnMountSummon(player)
+    self:despawnMountSummon(player)
     -- Dismount if necessary
     dismountIfMounted(player)
     -- Remove any applicable spells
@@ -613,7 +616,7 @@ end
 
 local function clearCustomVarsForPlayer(player)
     if not player or not player:IsLoggedIn() then return end
-    clearCustomVariables(player)
+    DreamMountFunctions:clearCustomVariables(player)
     SendMessage(player.pid,
                 Format(DreamMountSingleVarResetPattern
                        , DreamMountResetVarsString
@@ -691,13 +694,11 @@ local function createPetRecord(petRecordInput)
 
     creatureRecords[petId] = petRecord
     creatureRecordStore:Save()
-
     AddCreatureRecord(petId, petRecord)
-
     SendRecordDynamic(player.pid, true)
 end
 
-local function handleMountActivateMenu(pid, activateMenuChoice)
+function DreamMountFunctions:handleMountActivateMenu(pid, activateMenuChoice)
     activateMenuChoice = tonumber(activateMenuChoice)
     local player = Players[pid]
 
@@ -708,7 +709,7 @@ local function handleMountActivateMenu(pid, activateMenuChoice)
         return player:Message("Sucks to suck, this one's not implemented yet!")
     elseif activateMenuChoice == 1 then
         mountLog(Format("%s dismissed their mount!", player.name))
-        despawnMountSummon(player)
+        self:despawnMountSummon(player)
     elseif activateMenuChoice == 2 then
         local petCellRef = player.data.customVariables[DreamMountSummonRefNumKey]
         local playerCell = player.data.location.cell
@@ -849,7 +850,7 @@ function DreamMountFunctions:toggleMount(player)
         local mappedEquipSlot = EquipEnums[mountSlot]
 
         customVariables[DreamMountSummonWasEnabledKey] = customVariables[DreamMountSummonRefNumKey] ~= nil
-        despawnMountSummon(player)
+        self:despawnMountSummon(player)
 
         local replaceItem = playerData.equipment[mappedEquipSlot]
 
@@ -943,7 +944,7 @@ function DreamMountFunctions:loadMountConfig()
     assert(#self.mountConfig >= 1, 'Empty config found on reload!\n' .. Traceback(3))
 end
 
-function DreamMountFunctions.clearCustomVariablesCommand(_, pid, cmd)
+function DreamMountFunctions:clearCustomVariablesCommand(pid, cmd)
     local targetPid = tonumber(cmd[3])
     local targetPlayer = Players[targetPid]
     local callerPlayer = Players[pid]
@@ -961,7 +962,7 @@ function DreamMountFunctions.clearCustomVariablesCommand(_, pid, cmd)
         local playersWhoReset = {}
         for index = 0, #Players do
             local player = Players[index]
-            clearCustomVariables(player)
+            self:clearCustomVariables(player)
             playersWhoReset[#playersWhoReset + 1] = player.name
         end
         SendMessage(pid
@@ -980,7 +981,7 @@ end
 
 function DreamMountFunctions:setPreferredMount(_, pid, idGui, data)
     if idGui == DreamMountsMountActivateGUIID then
-        return handleMountActivateMenu(pid, data)
+        return self:handleMountActivateMenu(pid, data)
     elseif idGui ~= DreamMountsGUIID then return end
 
     local player = Players[pid]
@@ -1022,7 +1023,7 @@ function DreamMountFunctions:setPreferredMount(_, pid, idGui, data)
                                      color.Maroon))
     end
 
-    despawnMountSummon(player)
+    self:despawnMountSummon(player)
     dismountIfMounted(player)
 
     customVariables[DreamMountPreferredMountKey] = selectedMountIndex
@@ -1146,6 +1147,30 @@ function DreamMountFunctions:getPlayerMountSummon(player)
     return Format("%s_%s_%s_pet", playerName, mountRefNum, mountData.name):lower()
 end
 
+function DreamMountFunctions.createContainerRecord(petRecordInput)
+    local player = petRecordInput.player
+    local mountName = petRecordInput.mountName
+    local playerPetData = petRecordInput.playerPetData
+
+    ClearRecords()
+    SetRecordType(ContainerRecordType)
+    local containerRecordStore = RecordStores["container"]
+    local containerRecords = containerRecordStore.data.permanentRecords
+
+    local containerId = Format("%s_%s_container", player.name, mountName):lower()
+    local playerStrength = player.data.attributes.Strength.base
+    local containerRecord = {
+        name = Format("%s's %s", player.name, mountName),
+        weight = playerPetData.carryCapacityBase + ( playerStrength * playerPetData.carryCapacityPerStrength )
+    }
+
+    containerRecords[containerId] = containerRecord
+    containerRecordStore:Save()
+    AddContainerRecord(containerId, containerRecord)
+
+    SendRecordDynamic(player.pid, true)
+end
+
 --- Note that currently mounts do not update properly when re-summoning
 --- What'll need to be done is to replace the summon if it already exists
 function DreamMountFunctions:summonCreatureMount(pid, _)
@@ -1169,7 +1194,7 @@ function DreamMountFunctions:summonCreatureMount(pid, _)
         return player:Message(Format(DreamMountNotAPetStr, color.Red, mountName))
     end
 
-    despawnMountSummon(player)
+    self:despawnMountSummon(player)
 
     if not customVariables[DreamMountCurrentSummonsKey] then
         customVariables[DreamMountCurrentSummonsKey] = {}
@@ -1177,6 +1202,12 @@ function DreamMountFunctions:summonCreatureMount(pid, _)
 
     local summonsTable = customVariables[DreamMountCurrentSummonsKey]
     summonsTable[mountName] = petId
+
+    self.createContainerRecord {
+        player = player,
+        mountName = mountName,
+        playerPetData = mountData.petData
+    }
 
     createPetRecord {
         mountName = mountName,
@@ -1242,7 +1273,7 @@ function DreamMountFunctions.trackPlayerMountCell(_, _, pid, _)
     end
 end
 
-function DreamMountFunctions.onMountDied(_, _, pid, _)
+function DreamMountFunctions:onMountDied(_, pid, _)
     local player = Players[pid]
     if not player or not player:IsLoggedIn() then return end
     local customVariables = player.data.customVariables
@@ -1251,15 +1282,15 @@ function DreamMountFunctions.onMountDied(_, _, pid, _)
     for actorIndex = 0, GetActorListSize() - 1 do
         local uniqueIndex = GetActorRefNum(actorIndex) .. "-" .. GetActorMpNum(actorIndex)
         if uniqueIndex == customVariables[DreamMountSummonRefNumKey] then
-            despawnMountSummon(player)
+            self:despawnMountSummon(player)
         end
     end
 end
 
-function DreamMountFunctions.cleanUpMountOnLogin(_, _, pid)
+function DreamMountFunctions:cleanUpMountOnLogin(_, pid)
     local player = Players[pid]
     assert(player, DreamMountUnloggedPlayerSummonErr .. '\n' .. Traceback(3))
-    despawnMountSummon(player)
+    self:despawnMountSummon(player)
     dismountIfMounted(player)
 end
 
@@ -1278,7 +1309,7 @@ customEventHooks.registerHandler("OnObjectActivate", function(_, _, cellDescript
     -- but doesn't express whether the activated thing was a mount at all
     -- so you get false positives doing totally normal things like opening doors.
     --return tes3mp.MessageBox(activatingPlayer.pid, -1, DreamMountUnownedMountActivateStr)
-    if mountRefNum and mountRefNum ~= firstIndex then return end
+    if not mountRefNum or mountRefNum ~= firstIndex then return end
 
     mountLog(Format("%s activated their mount %s with index %s in cell %s",
                  activatingPlayer.name,
