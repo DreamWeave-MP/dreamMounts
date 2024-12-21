@@ -84,6 +84,7 @@ local DreamMountCreatedSpellRecordStr = 'Created spell record %s'
 local DreamMountDismountStr = '%s dismounted from mount of type: %s, replacing previously equipped item: %s'
 local DreamMountLogPrefix = 'DreamMount'
 local DreamMountMountStr = '%s mounted %s'
+local DreamMountMountSummonSpawnedStr = "Spawned mount summon %s for player %s in %s as object %s"
 local DreamMountRemovingRecordStr = "Removing %s from recordStore on behalf of %s"
 
 -- Error Strings
@@ -94,6 +95,7 @@ local DreamMountCreatePetNoPlayerErr = "No player was provided to create the pet
 local DreamMountDespawnNoPlayerErr = "despawnMountSummon was called without providing a player!\n"
 local DreamMountInvalidSpellEffectErrorStr = 'Cannot create a spell effect with no magnitude!'
 local DreamMountMissingMountName = 'No mount name!'
+local DreamMountMountDoesNotExistErr = "%s's preferred mount does not exist in the mount config map!"
 local DreamMountNilCellErr = "Unable to read cell in reloadMountMerchants call!\n%s"
 local DreamMountNilObjectDataErr = "Received nil objectData in reloadMountMerchantsCall!\n%s"
 local DreamMountNilInventoryErr = "Received nil currentInventory in reloadMountMerchantsCall!\n%s"
@@ -1058,16 +1060,17 @@ end
 ---@param player JSONPlayer
 ---@return string|nil recordId for the player's mount summon, nil if the player doesn't have a preferred mount set
 function DreamMountFunctions:getPlayerMountSummon(player)
+    local playerName = player.name
     local customVariables = player.data.customVariables
 
     local preferredMount = customVariables[DreamMountPreferredMountKey]
     if not preferredMount then
-        return player:Message("You do not have a preferred mount!")
+        return player:Message(Format(DreamMountNoPreferredMountMessage,
+                color.Yellow, playerName, DreamMountNoPreferredMountStr))
     end
 
-    local playerName = player.name
     local mountData = self.mountConfig[preferredMount]
-    assert(mountData, Format("%s's preferred mount does not exist in the mount config map!", playerName))
+    assert(mountData, Format(DreamMountMountDoesNotExistErr, playerName))
     local mountRefNum = tostring( WorldInstance:GetCurrentMpNum() + 1 )
 
     return Format("%s_%s_%s_pet", playerName, mountRefNum, mountData.name):lower()
@@ -1077,7 +1080,7 @@ end
 --- What'll need to be done is to replace the summon if it already exists
 function DreamMountFunctions:summonCreatureMount(pid, _)
     local player = Players[pid]
-    assert(player and player:IsLoggedIn(), "Cannot summon a mount for an unlogged player!")
+    assert(player and player:IsLoggedIn(), DreamMountUnloggedPlayerSummonErr)
     local playerData = player.data
     local customVariables = playerData.customVariables
 
@@ -1111,7 +1114,7 @@ function DreamMountFunctions:summonCreatureMount(pid, _)
 
     spawnMountSummon(player, petId)
 
-    mountLog(Format("Spawned mount summon %s for player %s in %s as object %s",
+    mountLog(Format(DreamMountMountSummonSpawnedStr,
                     mountName,
                     player.name,
                     playerData.location.cell,
