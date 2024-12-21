@@ -969,6 +969,7 @@ function DreamMountFunctions:handleMountActivateMenu(pid, activateMenuChoice)
     elseif activateMenuChoice == 1 then
         mountLog(Format("%s dismissed their mount!", player.name))
         self:despawnMountSummon(player)
+        self:despawnBagRef(player)
     elseif activateMenuChoice == 2 then
         local petCellRef = player.data.customVariables[DreamMountSummonRefNumKey]
         local playerCell = player.data.location.cell
