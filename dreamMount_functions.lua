@@ -548,7 +548,7 @@ local function getMountActiveEffects(mountData)
     end
 
     if mountData.fatigueRestore then
-        mountEffects[#mountEffects + 1] = Effects.RestoreFatigue(mountData.speedBonus)
+        mountEffects[#mountEffects + 1] = Effects.RestoreFatigue(mountData.fatigueRestore)
     end
 
     if #mountEffects > 0 then return mountEffects end
