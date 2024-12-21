@@ -69,6 +69,8 @@ local DreamMountConfigReloadedMessage =
 local DreamMountDefaultConfigSavedString =
     Format('%sSaved default mount config to %sdata/%s\n'
     , color.MediumBlue, color.Green, DreamMountConfigPath)
+local DreamMountInvalidResetPidErr = "%sInvalid player id provided for variable reset %s!\n"
+local DreamMountResetNotAllowedErr = "%sYou cannot reset DreamMountVariables for %s!\n"
 local DreamMountNoPreferredMountStr = Format('%sdoes not have a preferred mount set!\n' , color.Red)
 local DreamMountNoMountAvailableStr = Format('%sYou do not have any mounts available! Seek one out in the world . . .\n', color.Maroon)
 local DreamMountNotAPetStr = "%s%s cannot be used as a pet!"
@@ -908,10 +910,20 @@ function DreamMountFunctions:loadMountConfig()
 end
 
 function DreamMountFunctions.clearCustomVariablesCommand(_, pid, cmd)
-    local targetPlayer = cmd[2] and Players[tonumber(cmd[2])]
+    local targetPid = tonumber(cmd[3])
+    local targetPlayer = Players[targetPid]
+    local callerPlayer = Players[pid]
+    local callerCanResetTargetVars = targetPid == pid or canRunMountAdminCommands(callerPlayer)
 
-    if targetPlayer then clearCustomVarsForPlayer(targetPlayer)
-    elseif DreamMountFunctions.validateUser(pid) then
+    if targetPlayer then
+        if callerCanResetTargetVars then
+            clearCustomVarsForPlayer(targetPlayer)
+        else
+            return callerPlayer:Message(
+                Format(DreamMountResetNotAllowedErr, color.Red, targetPlayer.name)
+            )
+        end
+    elseif canRunMountAdminCommands(callerPlayer) and cmd[3] == "all" then
         local playersWhoReset = {}
         for index = 0, #Players do
             local player = Players[index]
@@ -923,8 +935,12 @@ function DreamMountFunctions.clearCustomVariablesCommand(_, pid, cmd)
                              , DreamMountResetVarsString
                              , Concat(playersWhoReset, ','))
                     , false)
+    elseif not cmd[3] then
+        clearCustomVarsForPlayer(callerPlayer)
     else
-        clearCustomVarsForPlayer(Players[pid])
+        return callerPlayer:Message(
+            Format(DreamMountInvalidResetPidErr, color.Red, cmd[3])
+        )
     end
 end
 
