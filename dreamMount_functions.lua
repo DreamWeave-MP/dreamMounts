@@ -1185,6 +1185,7 @@ function DreamMountFunctions:toggleMount(player)
     player:updateSpellbook {
         [targetSpell] = not isMounted,
     }
+    player:QuicksaveToDrive()
 end
 
 function DreamMountFunctions.validateUser(pid)
