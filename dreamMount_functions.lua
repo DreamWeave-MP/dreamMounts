@@ -961,6 +961,10 @@ function DreamMountFunctions:createContainerServerside(player)
     }
 end
 
+function DreamMountFunctions:selectedMountIsPet(player)
+    return self:getPlayerPetName(player) ~= nil
+end
+
 function DreamMountFunctions:activateMountContainer(player)
     self:despawnBagRef(player)
     self.sendContainerPlacePacket(self:createContainerServerside(player))
@@ -1582,6 +1586,16 @@ function DreamMountFunctions:onMountDied(_, pid, _)
             DeleteObjectForEveryone(summonCell, summonUniqueIndex)
             MountRefs[summonUniqueIndex] = nil
         end
+    end
+end
+
+function DreamMountFunctions:openContainerForNonSummon(pid, _)
+    local player = Players[pid]
+    assert(player and player:IsLoggedIn(), Traceback(3))
+    if not self:selectedMountIsPet(player) then
+        self:activateMountContainer(player)
+    else
+        player:Message(color.Red .. "Your currently selected mount must be summoned to use its container!")
     end
 end
 

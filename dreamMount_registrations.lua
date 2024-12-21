@@ -141,6 +141,7 @@ end
 ---| "'defaultConfig'"
 ---| "'clearPlayerVars'"
 ---| "'summon'"
+---| "'container'"
 
 ---@alias CommandId
 ---| "'showPreferredMountMenu'"
@@ -148,6 +149,7 @@ end
 ---| "'defaultMountConfig'"
 ---| "'clearCustomVariablesCommand'"
 ---| "'summonCreatureMount'"
+---| "'openContainerForNonSummon'"
 
 ---@type table <Subcommand, CommandId>
 local mountFuncs = {
@@ -156,6 +158,7 @@ local mountFuncs = {
   defaultConfig = 'defaultMountConfig',
   clearPlayerVars = 'clearCustomVariablesCommand',
   summon = "summonCreatureMount",
+  container = "openContainerForNonSummon",
 }
 
 ---@param pid PlayerId
