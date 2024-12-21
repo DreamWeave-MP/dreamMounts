@@ -495,7 +495,6 @@ local function unauthorizedUserMessage(pid)
 end
 
 -- Couple cases we're not yet handling
--- What if the cell is unloaded?
 -- What if the reference has already been deleted?
 --- Destroys the player's summoned pet, if one exists.
 --- This method also destroys the associated creature record, since current impl would
@@ -503,7 +502,6 @@ end
 ---@param player JSONPlayer
 local function despawnMountSummon(player)
     assert(player, DreamMountDespawnNoPlayerErr .. Traceback(3))
-    local pid = player.pid
 
     local customVariables = player.data.customVariables
     local summonRef = customVariables[DreamMountSummonRefNumKey]
@@ -516,14 +514,7 @@ local function despawnMountSummon(player)
 
     local mountName = mountData.name
 
-    local unload = false
-    if not LoadedCells[summonCell] then
-        LoadCellForPlayer(pid, summonCell)
-        unload = true
-    end
-
     DeleteObjectForEveryone(summonCell, summonRef)
-    LoadedCells[summonCell]:DeleteObjectData(summonRef)
 
     customVariables[DreamMountSummonRefNumKey] = nil
     customVariables[DreamMountSummonCellKey] = nil
@@ -541,8 +532,6 @@ local function despawnMountSummon(player)
 
         currentSummons[mountName] = nil
     end
-
-    if unload then UnloadCellForPlayer(pid, summonCell) end
 end
 
 --- Place the appropriate summon at the player's location,
