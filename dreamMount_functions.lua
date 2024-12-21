@@ -730,6 +730,8 @@ function DreamMountFunctions:clearCustomVariables(player)
     dismountIfMounted(player)
     -- Remove any applicable spells
     resetMountSpellForPlayer(player)
+    -- Despawn the bag ref, but don't delete all the player's bags
+    self:despawnBagRef(player)
 
     for _, variableId in ipairs {
         DreamMountPrevMountTypeKey,
