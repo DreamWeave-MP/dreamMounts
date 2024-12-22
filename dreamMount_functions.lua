@@ -1496,9 +1496,8 @@ function DreamMountFunctions:createMountSpells(firstPlayer)
 
         local petEffects = getPetAuraEffects(mountData)
         if petEffects then
-            local auraId, auraName = getPetAuraStrings(mountData)
-            -- local auraName = "Guara"
-            self:addMountSpellEffect(petEffects, auraId, auraName, permanentSpells)
+            local auraId = getPetAuraStrings(mountData)
+            self:addMountSpellEffect(petEffects, auraId, "Guara", permanentSpells)
         else
             local removeSpellId = getPetAuraStrings(mountData)
             permanentSpells[removeSpellId] = nil
