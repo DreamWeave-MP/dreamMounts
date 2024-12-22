@@ -288,6 +288,7 @@ local DreamMountConfigDefault = {
                 fatigueRestore = 1,
                 fatigueFortify = 50,
             },
+            spells = {},
         },
         containerData = {
             carryCapacityBase = 30,
@@ -792,30 +793,51 @@ function DreamMountFunctions:despawnMountSummon(player)
     if MountRefs[summonRef] then MountRefs[summonRef] = nil end
 end
 
+local function addObjectInPlayerCellToObjectList(objectDataTable)
+    local pid = objectDataTable.pid
+    if objectDataTable.clear then
+        ClearObjectList()
+        SetObjectListPid(pid)
+        SetObjectListCell(GetCell(pid))
+    end
+    SetObjectRefId(objectDataTable.refId)
+    SetObjectRefNum(objectDataTable.refNum)
+    SetObjectMpNum(objectDataTable.mpNum)
+    AddObject()
+end
+
 local function sendCreatureAttributePacket(attributePacketData)
     local player = attributePacketData.player
     local playerPetData = attributePacketData.playerPetData
     local petId = attributePacketData.petId
 
     local playerQueuedCommands = player.consoleCommandsQueued
-    local pid = player.pid
-    local playerCell = GetCell(pid)
     local summonSplitIndex = player.data.customVariables[DreamMountSummonRefNumKey]:split('-')
     assert(summonSplitIndex, "Refnum for player summon was either missing or failed to split!")
     local summonRefNum = summonSplitIndex[1]
     local summonMpNum = summonSplitIndex[2]
 
+    local objectData = {
+        clear = true,
+        pid = player.pid,
+        refId = petId,
+        refNum = summonRefNum,
+        mpNum = summonMpNum,
+    }
+
     for attributeName, attributeValue in pairs(playerPetData.attributes or {}) do
         local attributeSetter = Format("set%s %s", attributeName, attributeValue)
-        ClearObjectList()
-        SetObjectListPid(pid)
-        SetObjectListCell(playerCell)
-        SetObjectRefId(petId)
-        SetObjectRefNum(summonRefNum)
-        SetObjectMpNum(summonMpNum)
-        AddObject()
+        addObjectInPlayerCellToObjectList(objectData)
         tes3mp.SetObjectListConsoleCommand(attributeSetter)
         playerQueuedCommands[#playerQueuedCommands + 1] = attributeSetter
+        tes3mp.SendConsoleCommand(true)
+    end
+
+    for _, spellName in ipairs(playerPetData.spells or {}) do
+        addObjectInPlayerCellToObjectList(objectData)
+        local addSpellCommand = Format("addspell %s", spellName)
+        tes3mp.SetObjectListConsoleCommand(addSpellCommand)
+        playerQueuedCommands[#playerQueuedCommands + 1] = addSpellCommand
         tes3mp.SendConsoleCommand(true)
     end
 end
