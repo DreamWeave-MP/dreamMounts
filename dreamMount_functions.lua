@@ -138,7 +138,7 @@ local DreamMountCreatePetNoMountNameErr = "No mountName was provided to create t
 local DreamMountCreatePetNoPetDataErr = "No playerPetData was provided to create the pet record!\n"
 local DreamMountCreatePetNoPlayerErr = "No player was provided to create the pet record!\n"
 local DreamMountDespawnNoPlayerErr = "despawnMountSummon was called without providing a player!\n"
-local DreamMountInvalidSpellEffectErrorStr = 'Cannot create a spell effect with no magnitude!'
+local DreamMountInvalidSpellEffectErrorStr = 'Cannot create a spell effect with no magnitude!\n'
 local DreamMountMissingMountName = 'No mount name!'
 local DreamMountMountDoesNotExistErr = "%s's preferred mount does not exist in the mount config map!"
 local DreamMountNilCellErr = "Unable to read cell in reloadMountMerchants call!\n%s"
@@ -541,6 +541,7 @@ local AttributeNames = {
 local Effects = {
     FortifyAttribute = function(attributeId, magnitudeMin, magnitudeMax)
         assert(attributeId >= 0 and attributeId <= 7, Format("Invalid attribute ID Provided: %s!", attributeId))
+        assert(magnitudeMin, DreamMountInvalidSpellEffectErrorStr .. Traceback(3))
         return {
             attribute = attributeId,
             id = FortifyAttribute,
@@ -551,6 +552,7 @@ local Effects = {
         }
     end,
     FortifyFatigue = function(magnitudeMin, magnitudeMax)
+        assert(magnitudeMin, DreamMountInvalidSpellEffectErrorStr .. Traceback(3))
         return {
             id = FortifyFatigue,
             rangeType = 0,
@@ -560,6 +562,7 @@ local Effects = {
         }
     end,
     RestoreFatigue = function(magnitudeMin, magnitudeMax)
+        assert(magnitudeMin, DreamMountInvalidSpellEffectErrorStr .. Traceback(3))
         return {
             id = RestoreFatigue,
             rangeType = 0,
