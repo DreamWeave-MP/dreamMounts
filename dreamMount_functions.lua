@@ -535,6 +535,7 @@ local AttributeNames = {
 
 local Effects = {
     FortifyAttribute = function(attributeId, magnitudeMin, magnitudeMax)
+        assert(attributeId >= 0 and attributeId <= 7, Format("Invalid attribute ID Provided: %s!", attributeId))
         return {
             attribute = attributeId,
             id = FortifyAttribute,
@@ -885,6 +886,7 @@ local function createPetRecord(petRecordInput)
 end
 
 local function saveContainerData(containerSaveData)
+---@diagnostic disable-next-line: deprecated
     local player, containerId, containerIndex, containerCell = unpack(containerSaveData)
     local customVariables = player.data.customVariables
 
