@@ -70,6 +70,7 @@ local ContainerSet = enumerations.container.SET
 local CreatureRecordType = enumerations.recordType.CREATURE
 local EquipEnums = enumerations.equipment
 local FortifyAttribute = enumerations.effects.FORTIFY_ATTRIBUTE
+local FortifyFatigue = enumerations.effects.FORTIFY_FATIGUE
 local RemoveFromInventory = enumerations.inventory.REMOVE
 local RestoreFatigue = enumerations.effects.RESTORE_FATIGUE
 local Players = Players
@@ -279,6 +280,7 @@ local DreamMountConfigDefault = {
             thrustMinDmgPct = 0.40,
             aura = {
                 fatigueRestore = 1,
+                fatigueFortify = 40,
             },
         },
         containerData = {
@@ -545,6 +547,15 @@ local Effects = {
             skill = -1,
         }
     end,
+    FortifyFatigue = function(magnitudeMin, magnitudeMax)
+        return {
+            id = FortifyFatigue,
+            rangeType = 0,
+            magnitudeMin = magnitudeMin,
+            magnitudeMax = magnitudeMax or magnitudeMin,
+            skill = -1,
+        }
+    end,
     RestoreFatigue = function(magnitudeMin, magnitudeMax)
         return {
             id = RestoreFatigue,
@@ -569,11 +580,15 @@ local function getPetAuraEffects(mountData)
 
     if petAuraData.speedBonus then
         petEffects[#petEffects + 1] =
-            Effects.FortifyAttribute(AttributeNames.STRENGTH, petAuraData.speedBonus)
+            Effects.FortifyAttribute(AttributeNames.SPEED, petAuraData.speedBonus)
     end
 
     if petAuraData.fatigueRestore then
         petEffects[#petEffects + 1] = Effects.RestoreFatigue(petAuraData.fatigueRestore)
+    end
+
+    if petAuraData.fatigueFortify then
+        petEffects[#petEffects + 1] = Effects.FortifyFatigue(petAuraData.fatigueFortify)
     end
 
     if #petEffects > 0 then return petEffects end
@@ -583,11 +598,15 @@ local function getMountActiveEffects(mountData)
     local mountEffects = {}
 
     if mountData.speedBonus then
-        mountEffects[#mountEffects + 1] = Effects.FortifyAttribute(mountData.speedBonus)
+        mountEffects[#mountEffects + 1] = Effects.FortifyAttribute(AttributeNames.SPEED, mountData.speedBonus)
     end
 
     if mountData.fatigueRestore then
         mountEffects[#mountEffects + 1] = Effects.RestoreFatigue(mountData.fatigueRestore)
+    end
+
+    if mountData.fatigueFortify then
+        mountEffects[#mountEffects + 1] = Effects.FortifyFatigue(mountData.fatigueFortify)
     end
 
     if #mountEffects > 0 then return mountEffects end
