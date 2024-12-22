@@ -32,6 +32,7 @@ local RunConsoleCommandOnObject = logicHandler.RunConsoleCommandOnObject
 local RunConsoleCommandOnPlayer = logicHandler.RunConsoleCommandOnPlayer
 local Save = jsonInterface.quicksave
 local SendBaseInfo = tes3mp.SendBaseInfo
+local SendConsoleCommand = tes3mp.SendConsoleCommand
 local SendContainer = tes3mp.SendContainer
 local SendMessage = tes3mp.SendMessage
 local SendObjectActivate = tes3mp.SendObjectActivate
@@ -49,6 +50,7 @@ local SetModel = tes3mp.SetModel
 local SetObjectActivatingPid = tes3mp.SetObjectActivatingPid
 local SetObjectListAction = tes3mp.SetObjectListAction
 local SetObjectListCell = tes3mp.SetObjectListCell
+local SetObjectListConsoleCommand = tes3mp.SetObjectListConsoleCommand
 local SetObjectListPid = tes3mp.SetObjectListPid
 local SetObjectMpNum = tes3mp.SetObjectMpNum
 local SetObjectPosition = tes3mp.SetObjectPosition
@@ -835,17 +837,17 @@ local function sendCreatureAttributePacket(attributePacketData)
 
         local attributeSetter = Format("set%s %s", attributeName, attributeValue)
         addObjectInPlayerCellToObjectList(objectData)
-        tes3mp.SetObjectListConsoleCommand(attributeSetter)
+        SetObjectListConsoleCommand(attributeSetter)
         playerQueuedCommands[#playerQueuedCommands + 1] = attributeSetter
-        tes3mp.SendConsoleCommand(true)
+        SendConsoleCommand(true)
     end
 
     for _, spellName in ipairs(playerPetData.spells or {}) do
         addObjectInPlayerCellToObjectList(objectData)
         local addSpellCommand = Format("addspell %s", spellName)
-        tes3mp.SetObjectListConsoleCommand(addSpellCommand)
+        SetObjectListConsoleCommand(addSpellCommand)
         playerQueuedCommands[#playerQueuedCommands + 1] = addSpellCommand
-        tes3mp.SendConsoleCommand(true)
+        SendConsoleCommand(true)
     end
 end
 
