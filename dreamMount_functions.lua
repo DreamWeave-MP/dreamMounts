@@ -153,16 +153,17 @@ local DreamMountShouldHaveValidMountErr = "Player shouldn't have been able to op
 local DreamMountUnloggedPlayerSummonErr = "Cannot summon a mount for an unlogged player!"
 
 -- CustomVariables index keys
-local DreamMountEnabledKey = 'dreamMountIsMounted'
-local DreamMountPreferredMountKey = 'dreamMountPreferredMount'
-local DreamMountPrevItemId = 'dreamMountPreviousItemId'
-local DreamMountPrevMountTypeKey = 'dreamMountPreviousMountType'
-local DreamMountPrevSpellId = 'dreamMountPreviousSpellId'
-local DreamMountPrevAuraId = 'dreamMountPreviousAuraId'
-local DreamMountSummonRefNumKey = 'dreamMountSummonRefNum'
-local DreamMountSummonCellKey = 'dreamMountSummonCellDescription'
-local DreamMountSummonWasEnabledKey = 'dreamMountHadMountSummon'
-local DreamMountCurrentSummonsKey = 'dreamMountSummonsTable'
+local DreamMountVarTable = 'dreamMountVars'
+local DreamMountEnabledKey = 'isMounted'
+local DreamMountPreferredMountKey = 'preferredMount'
+local DreamMountPrevItemId = 'previousItemId'
+local DreamMountPrevMountTypeKey = 'previousMountType'
+local DreamMountPrevSpellId = 'previousSpellId'
+local DreamMountPrevAuraId = 'previousAuraId'
+local DreamMountSummonRefNumKey = 'summonRefNum'
+local DreamMountSummonCellKey = 'summonCellDescription'
+local DreamMountSummonWasEnabledKey = 'hadMountSummon'
+local DreamMountCurrentSummonsKey = 'summonsTable'
 local DreamMountSummonInventoryDataKey = 'dreamMountSummonInventories'
 
 -- MWScripts
