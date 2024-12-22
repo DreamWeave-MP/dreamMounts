@@ -275,6 +275,15 @@ local DreamMountConfigDefault = {
             chopMinDmgPct = 0.40,
             slashMinDmgPct = 0.40,
             thrustMinDmgPct = 0.40,
+            attributes = {
+                strength = 35,
+                intelligence = 2,
+                agility = 40,
+                willpower = 30,
+                luck = 60,
+                personality = 25,
+                speed = 70,
+            },
             aura = {
                 fatigueRestore = 1,
                 fatigueFortify = 50,
@@ -783,8 +792,41 @@ function DreamMountFunctions:despawnMountSummon(player)
     if MountRefs[summonRef] then MountRefs[summonRef] = nil end
 end
 
+local function sendCreatureAttributePacket(attributePacketData)
+    local player = attributePacketData.player
+    local playerPetData = attributePacketData.playerPetData
+    local petId = attributePacketData.petId
+
+    local playerQueuedCommands = player.consoleCommandsQueued
+    local pid = player.pid
+    local playerCell = GetCell(pid)
+    local summonSplitIndex = player.data.customVariables[DreamMountSummonRefNumKey]:split('-')
+    assert(summonSplitIndex, "Refnum for player summon was either missing or failed to split!")
+    local summonRefNum = summonSplitIndex[1]
+    local summonMpNum = summonSplitIndex[2]
+
+    for attributeName, attributeValue in pairs(playerPetData.attributes or {}) do
+        local attributeSetter = Format("set%s %s", attributeName, attributeValue)
+        ClearObjectList()
+        SetObjectListPid(pid)
+        SetObjectListCell(playerCell)
+        SetObjectRefId(petId)
+        SetObjectRefNum(summonRefNum)
+        SetObjectMpNum(summonMpNum)
+        AddObject()
+        tes3mp.SetObjectListConsoleCommand(attributeSetter)
+        playerQueuedCommands[#playerQueuedCommands + 1] = attributeSetter
+        tes3mp.SendConsoleCommand(true)
+    end
+end
+
 --- Place the appropriate summon at the player's location,
 --- Enabling the follow routine when doing so
+--- And also assigning all of the creature's attributes
+--- because I realized that creatures have attributes but you can't set those
+--- attributes as fields of creature or NPC records (or skills lol) because :todd:
+--- So there's no other way to do it, and also all creatures whom were created by custom records
+--- have a strength of 255
 ---@param player JSONPlayer
 ---@param summonId string generated recordId for the mount summon
 local function spawnMountSummon(player, summonId)
@@ -1599,14 +1641,21 @@ function DreamMountFunctions:summonCreatureMount(pid, _)
         containerData = mountData.containerData
     }
 
+    local petData = mountData.petData
     createPetRecord {
         mountName = mountName,
         petId = petId,
         player = player,
-        playerPetData = mountData.petData,
+        playerPetData = petData,
     }
 
     spawnMountSummon(player, petId)
+
+    sendCreatureAttributePacket {
+        player = player,
+        petId = petId,
+        playerPetData = petData
+    }
 
     local auraId = getPetAuraStrings(mountData)
     toggleSpell(auraId, player)
