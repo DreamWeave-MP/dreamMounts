@@ -2,6 +2,7 @@
 local Concat = table.concat
 local Format = string.format
 local Traceback = debug.traceback
+local Uppercase = string.upper
 
 -- TES3MP Functions
 local AddContainerItem = tes3mp.AddContainerItem
@@ -118,6 +119,11 @@ local DreamMountUnauthorizedUserMessage =
     , color.Red, color.MediumBlue, color.Red)
 local DreamMountDefaultListString = "Cancel"
 local DreamMountUnownedMountActivateStr = color.Red .. "You cannot activate this mount as it does not belong to you!"
+local DreamMountActivateMenuChoices = "Open Pack;Dismiss;Pet;Ride;Nothing"
+local DreamMountActivateMenuHeader = "What would you like to do with your mount?"
+local DreamMountMountMustBeSummonedStr = color.Red .. "Your currently selected mount must be summoned to use its container!\n"
+local DreamMountPreferredMountMenuHeaderStr = "%s Your current one is: %s"
+local DreamMountNoContainerDataErr = "This mount does not have any container data!\n"
 
 -- Patterns
 local DreamMountNoPreferredMountMessage = '%s%s %s'
@@ -131,8 +137,11 @@ local DreamMountCreatedSpellRecordStr = 'Created spell record %s'
 local DreamMountDismountStr = '%s dismounted from mount of type: %s, replacing previously equipped item: %s'
 local DreamMountLogPrefix = 'DreamMount'
 local DreamMountMountStr = '%s mounted %s'
+local DreamMountDismissedStr = "%s dismissed their mount!"
 local DreamMountMountSummonSpawnedStr = "Spawned mount summon %s for player %s in %s as object %s"
 local DreamMountRemovingRecordStr = "Removing %s from recordStore on behalf of %s"
+local DreamMountMountActivatedStr = "%s activated their mount %s with index %s in cell %s"
+local DreamMountSuccessfulContainerDespawnStr = "Successfully despawned old %s container with index %s for player %s"
 
 -- Error Strings
 local DreamMountCreatePetNoIdErr = "No petId was provided to create the pet record!\n"
@@ -151,6 +160,17 @@ local DreamMountNoPidProvided = 'No PlayerID provided!\n%s'
 local DreamMountNoPrevMountErr = 'No previous mount to remove for player %s, aborting!'
 local DreamMountShouldHaveValidMountErr = "Player shouldn't have been able to open this menu without a valid mount!"
 local DreamMountUnloggedPlayerSummonErr = "Cannot summon a mount for an unlogged player!"
+local DreamMountEmptyMountConfigErr = "Empty mount config found on reload!\n"
+local DreamMountActivateChoiceFailedToConvertErr = "failed to convert activation menu choice to a number, or none provided!"
+local DreamMountNoContainerForUnloggedPlayerErr = "Cannot activate container for an unlogged player!"
+local DreamMountImpossibleActivationErr = "You can't have activated this object if you don't have a pet assigned!"
+local DreamMountImpossibleUnloadedCellErr = "The cellDescription requested isn't loaded! This should never happen!\n"
+local DreamMountImpossibleObjectDataErr = "Object data should have been initialized already, but it isn'! Bailing!\n"
+local DreamMountImpossibleRefidErr = "Found null or empty refId during inventory iteration!\n"
+local DreamMountImpossibleMountNameErr = "All mounts must have a name!"
+local DreamMountImpossibleAttributeIDErr = "Invalid attribute ID provided: %s!"
+local DreamMountImpossibleAttributeNameErr = "Invalid attribute name %s provided!\n%s"
+local DreamMountMissingSummonRefNumErr = "Refnum for player summon was either missing or failed to split!"
 
 -- CustomVariables index keys
 local DreamMountVarTable = 'dreamMountVars'
@@ -562,7 +582,7 @@ local AttributeNames = {
 
 local Effects = {
     FortifyAttribute = function(attributeId, magnitudeMin, magnitudeMax)
-        assert(attributeId >= 0 and attributeId <= 7, Format("Invalid attribute ID Provided: %s!", attributeId))
+        assert(attributeId >= 0 and attributeId <= 7, Format(DreamMountImpossibleAttributeIDErr, attributeId))
         assert(magnitudeMin, DreamMountInvalidSpellEffectErrorStr .. Traceback(3))
         return {
             attribute = attributeId,
@@ -596,7 +616,7 @@ local Effects = {
 }
 
 local function getPetAuraStrings(mountData)
-    assert(mountData.name ~= nil and mountData.name ~= '', "All mounts must have a name!")
+    assert(mountData.name ~= nil and mountData.name ~= '', DreamMountImpossibleMountNameErr)
     return Format("%s_aura", mountData.name):lower(), Format("%s Aura", mountData.name)
 end
 
@@ -667,13 +687,13 @@ function DreamMountFunctions:despawnBagRef(player)
     local containerData = self:getCurrentContainerData(player)
     if not containerData or not containerData.cell or not containerData.index then return end
 
-    local containerIndex = table.concat(containerData.index, '-')
+    local containerIndex = Concat(containerData.index, '-')
 
     DeleteObjectForEveryone(containerData.cell, containerIndex)
     containerData.cell = nil
     containerData.index = nil
 
-    mountLog(Format("Successfully despawned old %s container with index %s for player %s",
+    mountLog(Format(DreamMountSuccessfulContainerDespawnStr,
                     self:getContainerRecordId(player),
                     containerIndex,
                     player.name))
@@ -712,7 +732,7 @@ function DreamMountFunctions:updateCurrentMountContainer(player)
     local playerCell = LoadedCells[playerCellId]
 
     local cellObjectData = playerCell.data.objectData
-    local containerIndex = table.concat(containerData.index, '-')
+    local containerIndex = Concat(containerData.index, '-')
 
     cellObjectData[containerIndex].inventory = containerData.inventory
     -- Make another function (or use this one) which actually
@@ -726,8 +746,7 @@ function DreamMountFunctions:updateCurrentMountContainer(player)
     SetObjectRefId(containerId)
 
     for _, item in ipairs(containerData.inventory) do
-        assert(item.refId and item.refId ~= '',
-               "Found null or empty refId during inventory iteration!\n" .. Traceback(3))
+        assert(item.refId and item.refId ~= '', DreamMountImpossibleRefidErr .. Traceback(3))
 
         SetContainerItemRefId(item.refId)
         SetContainerItemCount(item.count or 1)
@@ -827,7 +846,7 @@ local function sendCreatureAttributePacket(attributePacketData)
 
     local playerQueuedCommands = player.consoleCommandsQueued
     local summonSplitIndex = getPlayerMountVars(player)[DreamMountSummonRefNumKey]:split('-')
-    assert(summonSplitIndex, "Refnum for player summon was either missing or failed to split!")
+    assert(summonSplitIndex, DreamMountMissingSummonRefNumErr)
     local summonRefNum = summonSplitIndex[1]
     local summonMpNum = summonSplitIndex[2]
 
@@ -840,8 +859,8 @@ local function sendCreatureAttributePacket(attributePacketData)
     }
 
     for attributeName, attributeValue in pairs(playerPetData.attributes or {}) do
-        assert(AttributeNames[string.upper(attributeName)],
-            Format("Invalid attribute name %s provided!\n%s",
+        assert(AttributeNames[Uppercase(attributeName)],
+            Format(DreamMountImpossibleAttributeNameErr,
                 attributeName,
                 Traceback(3)))
 
@@ -1063,8 +1082,7 @@ function DreamMountFunctions:createContainerServerside(player)
 	local uniqueIndex =  Format("0-%s", mpNum)
 
 	local bagSpawnCell = LoadedCells[cellDescription]
-	assert(bagSpawnCell, "The cellDescription requested is not a loaded cell! This should never happen!\n"
-		   .. debug.traceback(3))
+	assert(bagSpawnCell, DreamMountImpossibleUnloadedCellErr .. debug.traceback(3))
 
 	bagSpawnCell:InitializeObjectData(uniqueIndex, targetContainer)
 
@@ -1073,8 +1091,7 @@ function DreamMountFunctions:createContainerServerside(player)
 	local objectData = cellData.objectData
     local targetObject = objectData[uniqueIndex]
 
-	assert(objectData[uniqueIndex], "Object data should have been initialized already, but it isn'! Bailing!\n"
-		   .. debug.traceback(3))
+	assert(objectData[uniqueIndex], DreamMountImpossibleObjectDataErr .. debug.traceback(3))
 
     targetObject.location = {
         posX = GetPosX(pid),
@@ -1120,7 +1137,7 @@ end
 
 function DreamMountFunctions:activateMountContainer(player)
     if not self:mountHasContainerData(player) then
-        return player:Message("This mount does not have any container data!\n")
+        return player:Message(DreamMountNoContainerDataErr)
     end
 
     self:despawnBagRef(player)
@@ -1133,19 +1150,19 @@ function DreamMountFunctions:handleMountActivateMenu(pid, activateMenuChoice)
     activateMenuChoice = tonumber(activateMenuChoice)
     local player = Players[pid]
 
-    assert(activateMenuChoice, "Failed to convert activation menu choice to a number, or none provided!")
-    assert(player and player:IsLoggedIn(), "Cannot activate container for an unlogged player!")
+    assert(activateMenuChoice, DreamMountActivateChoiceFailedToConvertErr)
+    assert(player and player:IsLoggedIn(), DreamMountNoContainerForUnloggedPlayerErr)
 
     if activateMenuChoice == 0 then
         self:activateMountContainer(player)
     elseif activateMenuChoice == 1 then
-        mountLog(Format("%s dismissed their mount!", player.name))
+        mountLog(Format(DreamMountDismissedStr, player.name))
         self:despawnMountSummon(player)
         self:despawnBagRef(player)
     elseif activateMenuChoice == 2 then
         local petCellRef = player.data.customVariables[DreamMountSummonRefNumKey]
         local playerCell = player.data.location.cell
-        assert(petCellRef, "You can't have activated this object if you don't have a pet assigned!")
+        assert(petCellRef, DreamMountImpossibleActivationErr)
 
         RunConsoleCommandOnObject(pid, "loopgroup idle6 1 2",
                                   playerCell, petCellRef, true)
@@ -1384,7 +1401,7 @@ function DreamMountFunctions:loadMountConfig()
     if self.mountConfig == DreamMountConfigDefault then
         Save(DreamMountConfigPath, self.mountConfig)
     end
-    assert(#self.mountConfig >= 1, 'Empty mount config found on reload!\n' .. Traceback(3))
+    assert(#self.mountConfig >= 1, DreamMountEmptyMountConfigErr .. Traceback(3))
 
     self.mountMerchants = Load(DreamMerchantConfigPath) or DreamMountMerchantsDefault
     if self.mountMerchants == DreamMountMerchantsDefault then
@@ -1497,7 +1514,7 @@ function DreamMountFunctions:showPreferredMountMenu(pid, _)
     if currentPreferredMount then
         local playerMountData = self.mountConfig[currentPreferredMount]
         if playerMountData then
-            listHeader = Format("%s Your current one is: %s", listHeader, playerMountData.name)
+            listHeader = Format(DreamMountPreferredMountMenuHeaderStr, listHeader, playerMountData.name)
         end
     end
 
@@ -1747,7 +1764,7 @@ function DreamMountFunctions:openContainerForNonSummon(pid, _)
     if not self:selectedMountIsPet(player) then
         self:activateMountContainer(player)
     else
-        player:Message(color.Red .. "Your currently selected mount must be summoned to use its container!\n")
+        player:Message(DreamMountMountMustBeSummonedStr)
     end
 end
 
@@ -1778,15 +1795,15 @@ function DreamMountFunctions.handleMountActivation(_, _, _, cellDescription, obj
         return MessageBox(activatingPlayer.pid, -1, DreamMountUnownedMountActivateStr)
     end
 
-    mountLog(Format("%s activated their mount %s with index %s in cell %s",
+    mountLog(Format(DreamMountMountActivatedStr,
                  activatingName,
                  firstObject.refId,
                  firstIndex,
                  cellDescription))
 
     activatingPlayer:MessageBox(DreamMountsMountActivateGUIID,
-                                "What would you like to do with your mount?",
-                                "Open Pack;Dismiss;Pet;Ride;Nothing")
+                                DreamMountActivateMenuHeader,
+                                DreamMountActivateMenuChoices)
 end
 
 return DreamMountFunctions
