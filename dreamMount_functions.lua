@@ -1707,8 +1707,9 @@ function DreamMountFunctions.handleMountActivation(_, _, _, cellDescription, obj
     local mountRefNum = activatingPlayer.data.customVariables[DreamMountSummonRefNumKey]
     local owningPlayer = MountRefs[firstIndex]
 
-    if not mountRefNum then return
-    elseif owningPlayer and owningPlayer ~= activatingName then
+    if not mountRefNum or not owningPlayer then
+        return
+    elseif owningPlayer ~= activatingName then
         return MessageBox(activatingPlayer.pid, -1, DreamMountUnownedMountActivateStr)
     end
 
