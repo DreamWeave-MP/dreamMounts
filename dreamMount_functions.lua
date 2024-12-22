@@ -806,6 +806,8 @@ local function addObjectInPlayerCellToObjectList(objectDataTable)
     AddObject()
 end
 
+--- Assign creature attributes here instead of as record data
+--- Because spells, skills, and attributes can't be set by custom records
 local function sendCreatureAttributePacket(attributePacketData)
     local player = attributePacketData.player
     local playerPetData = attributePacketData.playerPetData
@@ -849,11 +851,6 @@ end
 
 --- Place the appropriate summon at the player's location,
 --- Enabling the follow routine when doing so
---- And also assigning all of the creature's attributes
---- because I realized that creatures have attributes but you can't set those
---- attributes as fields of creature or NPC records (or skills lol) because :todd:
---- So there's no other way to do it, and also all creatures whom were created by custom records
---- have a strength of 255
 ---@param player JSONPlayer
 ---@param summonId string generated recordId for the mount summon
 local function spawnMountSummon(player, summonId)
