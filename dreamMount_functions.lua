@@ -730,7 +730,9 @@ function DreamMountFunctions:despawnMountSummon(player)
 
     local petAura = customVariables[DreamMountPrevAuraId]
     if petAura then
-        toggleSpell(petAura, player)
+        player:updateSpellbook {
+            [petAura] = false,
+        }
     end
 
     customVariables[DreamMountPrevAuraId] = nil
