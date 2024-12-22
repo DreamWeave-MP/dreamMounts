@@ -1433,8 +1433,10 @@ function DreamMountFunctions:showPreferredMountMenu(pid, _)
 
     local currentPreferredMount = player.data.customVariables[DreamMountPreferredMountKey]
     if currentPreferredMount then
-        local mountName = self.mountConfig[currentPreferredMount].name
-        listHeader = Format("%s Your current one is: %s", listHeader, mountName)
+        local playerMountData = self.mountConfig[currentPreferredMount]
+        if playerMountData then
+            listHeader = Format("%s Your current one is: %s", listHeader, playerMountData.name)
+        end
     end
 
     ListBox(pid, DreamMountsGUIID , listHeader, DreamMountListString)
