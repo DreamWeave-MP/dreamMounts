@@ -1,5 +1,3 @@
---- Make automatically re-enabling the companion opt-out
-
 -- STL Functions
 local Concat = table.concat
 local Format = string.format
@@ -154,7 +152,6 @@ local DreamMountUnloggedPlayerSummonErr = "Cannot summon a mount for an unlogged
 
 -- CustomVariables index keys
 local DreamMountEnabledKey = 'dreamMountIsMounted'
-local DreamMountNoAutoSummonKey = 'dreamMountAutoSummon'
 local DreamMountPreferredMountKey = 'dreamMountPreferredMount'
 local DreamMountPrevItemId = 'dreamMountPreviousItemId'
 local DreamMountPrevMountTypeKey = 'dreamMountPreviousMountType'
