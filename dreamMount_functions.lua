@@ -299,13 +299,13 @@ local DreamMountConfigDefault = {
             slashMinDmgPct = 0.40,
             thrustMinDmgPct = 0.40,
             attributes = {
-                strength = 35,
-                intelligence = 2,
-                agility = 40,
-                willpower = 30,
-                luck = 60,
-                personality = 25,
-                speed = 70,
+                Strength = 0.60,
+                Intelligence = 0.20,
+                Agility = 0.90,
+                Willpower = 0.35,
+                Luck = 0.80,
+                Personality = 0.20,
+                Speed = 1.25,
             },
             aura = {
                 fatigueRestore = 1,
@@ -502,6 +502,10 @@ end
 
 local function actorPacketUniqueIndex(actorIndex)
     return Format("%s-%s", GetActorRefNum(actorIndex), GetActorMpNum(actorIndex))
+end
+
+local function round(number)
+    return math.floor(number + 0.5)
 end
 
 local function addOrRemoveItem(addOrRemove, mount, player)
@@ -866,13 +870,15 @@ local function sendCreatureAttributePacket(attributePacketData)
         mpNum = summonMpNum,
     }
 
+    local playerAttributes = player.data.attributes
     for attributeName, attributeValue in pairs(playerPetData.attributes or {}) do
         assert(AttributeNames[Uppercase(attributeName)],
             Format(DreamMountImpossibleAttributeNameErr,
                 attributeName,
                 Traceback(3)))
 
-        local attributeSetter = Format("set%s %s", attributeName, attributeValue)
+        local finalValue = round(playerAttributes[attributeName].base * attributeValue)
+        local attributeSetter = Format("set%s %s", attributeName, finalValue)
         addObjectInPlayerCellToObjectList(objectData)
         SetObjectListConsoleCommand(attributeSetter)
         playerQueuedCommands[#playerQueuedCommands + 1] = attributeSetter
@@ -949,10 +955,6 @@ local function createScriptRecords()
         scriptRecords[scriptId] = { scriptText = scriptText }
     end
     scriptRecordStore:Save()
-end
-
-local function round(number)
-    return math.floor(number + 0.5)
 end
 
 local function createPetRecord(petRecordInput)
