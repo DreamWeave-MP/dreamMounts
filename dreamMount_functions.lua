@@ -287,6 +287,7 @@ local DreamMountConfigDefault = {
     },
     -- 2
     {
+        -- Weaker feather, more damage
         name = "Pack Guar 1",
         item = 'rot_c_guar1B_shirtC3',
         model = 'mountedguar1',
@@ -295,6 +296,7 @@ local DreamMountConfigDefault = {
     },
     -- 3
     {
+        -- Stronger feather, less damage
         name = "Pack Guar 2",
         item = 'rot_c_guar1A_shirt0',
         model = 'mountedguar1',
@@ -303,6 +305,7 @@ local DreamMountConfigDefault = {
     },
     -- 4
     {
+        -- Buff strength & attack
         name = "Redoran War Guar",
         item = 'rot_c_guar2A_shirt0_redoranwar',
         model = 'mountedguar2',
@@ -315,6 +318,7 @@ local DreamMountConfigDefault = {
     },
     -- 5
     {
+        -- Large personality buff, illusion buff
         name = "Guar with Drapery (Fine)",
         item = 'rot_c_guar2B_shirt0_ordinator',
         model = 'mountedguar2',
@@ -327,6 +331,7 @@ local DreamMountConfigDefault = {
     },
     -- 6
     {
+        -- Smaller personality buff, mysticism buff
         name = "Guar with Drapery (Simple)",
         item = 'rot_c_guar2C_shirt0_scout',
         model = 'mountedguar2',
@@ -339,6 +344,7 @@ local DreamMountConfigDefault = {
     },
     -- 7
     {
+        -- Not a pet
         name = "Red Speeder",
         item = 'sw_speeder1test',
         mountType = GauntletMountType,
