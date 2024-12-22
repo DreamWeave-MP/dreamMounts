@@ -1542,6 +1542,7 @@ function DreamMountFunctions:createContainerRecord(containerRecordInput)
     local containerRecords = containerRecordStore.data.permanentRecords
 
     local containerId = self:getContainerRecordId(player)
+    if not containerId then return end
     local playerStrength = player.data.attributes.Strength.base
     local containerRecord = {
         name = self:getPlayerPetName(player),
