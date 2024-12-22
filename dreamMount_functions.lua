@@ -918,8 +918,9 @@ local function saveContainerData(containerSaveData)
 
     local inventoryData = customVariables[DreamMountSummonInventoryDataKey]
     if not inventoryData[containerId] then
-        inventoryData[containerId] = {}
-        inventoryData[containerId].inventory = {}
+        inventoryData[containerId] = {
+            inventory = {},
+        }
     end
 
     local containerData = inventoryData[containerId]
