@@ -126,6 +126,7 @@ local BodyPart = {
 local DefaultKeyName = "Reins"
 local DreamMountConfigPath = 'custom/dreamMountConfig.json'
 local DreamMerchantConfigPath = 'custom/dreamMountMerchants.json'
+local DreamMountBodyPartConfigPath = 'custom/dreamMountBodyParts.json'
 local GuarMountFilePathStr = 'rot/anim/%s.nif'
 
 -- UI Messages
@@ -1294,10 +1295,7 @@ function DreamMountFunctions:reloadMountMerchants(_, _, cellDescription, objects
     end
 end
 
--- !!!!!!!
--- NOTE: Don't forget to store this data in a json file and reload it like the others!!!
--- !!!!!!!
-function DreamMountFunctions.createBodyPartRecords(firstPid)
+function DreamMountFunctions:createBodyPartRecords(firstPid)
     local partRecords = RecordStores['bodypart']
     local permanentParts = partRecords.data.permanentRecords
 
@@ -1310,7 +1308,7 @@ function DreamMountFunctions.createBodyPartRecords(firstPid)
     local tailSlot = BodyPart.Slots.Tail
 
     local partsSaved = 0
-    for _, partData in ipairs(MountBodyPartsDefault) do
+    for _, partData in ipairs(self.mountParts) do
         assert(partData.id and partData.model, DreamMountInvalidBodyPartDataErr)
         local newPartId = partData.id
         local newPart = {
@@ -1501,6 +1499,8 @@ function DreamMountFunctions:logConfig()
     tableHelper.print(self.mountConfig)
     mountLog("---------------MERCHANT CONFIG---------------")
     tableHelper.print(self.mountMerchants)
+    mountLog("---------------BODYPART CONFIG---------------")
+    tableHelper.print(self.mountParts)
     mountLog("---------------END DREAMMOUNT CONFIG---------------")
 end
 
@@ -1515,6 +1515,11 @@ function DreamMountFunctions:loadMountConfig()
     self.mountMerchants = Load(DreamMerchantConfigPath) or DreamMountMerchantsDefault
     if self.mountMerchants == DreamMountMerchantsDefault then
         Save(DreamMerchantConfigPath, self.mountMerchants)
+    end
+
+    self.mountParts = Load(DreamMountBodyPartConfigPath) or MountBodyPartsDefault
+    if self.mountParts == MountBodyPartsDefault then
+        Save(DreamMountBodyPartConfigPath, self.mountParts)
     end
 
     self:logConfig()
@@ -1647,6 +1652,7 @@ function DreamMountFunctions.defaultMountConfig(_, pid)
 
     SlowSave(DreamMountConfigPath, DreamMountConfigDefault)
     SlowSave(DreamMerchantConfigPath, DreamMountMerchantsDefault)
+    SlowSave(DreamMountBodyPartConfigPath, MountBodyPartsDefault)
 
     SendMessage(pid, DreamMountDefaultConfigSavedString, false)
 end
@@ -1818,7 +1824,7 @@ function DreamMountFunctions:initMountData()
     self:loadMountConfig()
     self:createMountSpells(firstPlayer)
     self:createKeyRecords(firstPlayer)
-    self.createBodyPartRecords(firstPlayer)
+    self:createBodyPartRecords(firstPlayer)
     createScriptRecords()
 end
 
