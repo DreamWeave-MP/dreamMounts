@@ -517,8 +517,17 @@ local function unauthorizedUserMessage(pid)
     SendMessage(pid, DreamMountUnauthorizedUserMessage, false)
 end
 
+---@param player JSONPlayer
+---@return table
+local function getPlayerMountVars(player)
+    assert(player and player:IsLoggedIn(), DreamMountUnloggedPlayerSummonErr .. Traceback(3))
+    local customVariables = player.data.customVariables
+    if not customVariables[DreamMountVarTable] then customVariables[DreamMountVarTable] = {} end
+    return customVariables[DreamMountVarTable]
+end
+
 local function dismountIfMounted(player)
-    if player.data.customVariables[DreamMountEnabledKey] then
+    if getPlayerMountVars(player)[DreamMountEnabledKey] then
         DreamMountFunctions:toggleMount(player)
     end
 end
@@ -648,7 +657,7 @@ end
 
 function DreamMountFunctions:getMountData(player)
     assert(player and player:IsLoggedIn(), Traceback(3))
-    local preferredMount = player.data.customVariables[DreamMountPreferredMountKey]
+    local preferredMount = getPlayerMountVars(player)[DreamMountPreferredMountKey]
     return self.mountConfig[preferredMount]
 end
 
@@ -754,7 +763,7 @@ end
 function DreamMountFunctions:despawnMountSummon(player)
     assert(player, DreamMountDespawnNoPlayerErr .. Traceback(3))
 
-    local customVariables = player.data.customVariables
+    local customVariables = getPlayerMountVars(player)
     local summonRef = customVariables[DreamMountSummonRefNumKey]
     local summonCell = customVariables[DreamMountSummonCellKey]
     if not summonRef and not summonCell then return end
@@ -817,7 +826,7 @@ local function sendCreatureAttributePacket(attributePacketData)
     local petId = attributePacketData.petId
 
     local playerQueuedCommands = player.consoleCommandsQueued
-    local summonSplitIndex = player.data.customVariables[DreamMountSummonRefNumKey]:split('-')
+    local summonSplitIndex = getPlayerMountVars(player)[DreamMountSummonRefNumKey]:split('-')
     assert(summonSplitIndex, "Refnum for player summon was either missing or failed to split!")
     local summonRefNum = summonSplitIndex[1]
     local summonMpNum = summonSplitIndex[2]
@@ -859,9 +868,8 @@ end
 local function spawnMountSummon(player, summonId)
     assert(player and player:IsLoggedIn(), DreamMountUnloggedPlayerSummonErr)
     local pid = player.pid
-    local playerData = player.data
-    local customVariables = playerData.customVariables
-    local playerCell = playerData.location.cell
+    local playerCell = player.data.location.cell
+    local customVariables = getPlayerMountVars(player)
 
     local summonIndex = CreateObjectAtPlayer(pid, BuildObjectData(summonId), "spawn")
     SetAIForActor(LoadedCells[playerCell], summonIndex, AIFollow, pid)
@@ -876,7 +884,7 @@ end
 --- Remove and if necessary, re-add the relevant mount buff for the player
 --- Used when resetting the spell records, or custom variables
 local function resetMountSpellForPlayer(player, spellRecords)
-    local prevMountSpell = player.data.customVariables[DreamMountPrevSpellId]
+    local prevMountSpell = getPlayerMountVars(player)[DreamMountPrevSpellId]
     if not prevMountSpell then return end
     toggleSpell(prevMountSpell, player, spellRecords)
 end
@@ -884,8 +892,6 @@ end
 --- Resets all DreamMount state for a given player
 ---@param player JSONPlayer
 function DreamMountFunctions:clearCustomVariables(player)
-    local customVariables = player.data.customVariables
-
     -- De-summon summons
     self:despawnMountSummon(player)
     -- Dismount if necessary
@@ -895,20 +901,7 @@ function DreamMountFunctions:clearCustomVariables(player)
     -- Despawn the bag ref, but don't delete all the player's bags
     self:despawnBagRef(player)
 
-    for _, variableId in ipairs {
-        DreamMountPrevMountTypeKey,
-        DreamMountEnabledKey,
-        DreamMountPreferredMountKey,
-        DreamMountPrevItemId,
-        DreamMountPrevSpellId,
-        DreamMountSummonRefNumKey,
-        DreamMountSummonCellKey,
-        DreamMountSummonWasEnabledKey,
-        DreamMountCurrentSummonsKey,
-        DreamMountPrevAuraId,
-    } do
-        customVariables[variableId] = nil
-    end
+    player.data.customVariables[DreamMountVarTable] = {}
     player:QuicksaveToDrive()
 end
 
@@ -1272,7 +1265,7 @@ end
 function DreamMountFunctions:toggleMount(player)
     local pid = player.pid
     local playerData = player.data
-    local customVariables = playerData.customVariables
+    local customVariables = getPlayerMountVars(player)
     local charData = playerData.character
     local isMounted = customVariables[DreamMountEnabledKey]
     local mountIndex = customVariables[DreamMountPreferredMountKey]
@@ -1470,7 +1463,7 @@ function DreamMountFunctions:setPreferredMount(_, pid, idGui, data)
         end
     end
 
-    local customVariables = player.data.customVariables
+    local customVariables = getPlayerMountVars(player)
 
     local prevPreferredMount = customVariables[DreamMountPreferredMountKey]
     if prevPreferredMount and prevPreferredMount == selectedMountIndex then
@@ -1591,7 +1584,7 @@ end
 ---@return string|nil recordId for the player's mount summon, nil if the player doesn't have a preferred mount set
 function DreamMountFunctions:getPlayerMountSummon(player)
     local playerName = player.name
-    local customVariables = player.data.customVariables
+    local customVariables = getPlayerMountVars(player)
 
     local preferredMount = customVariables[DreamMountPreferredMountKey]
     if not preferredMount then
@@ -1634,9 +1627,7 @@ end
 --- What'll need to be done is to replace the summon if it already exists
 function DreamMountFunctions:summonCreatureMount(pid, _)
     local player = Players[pid]
-    assert(player and player:IsLoggedIn(), DreamMountUnloggedPlayerSummonErr)
-    local playerData = player.data
-    local customVariables = playerData.customVariables
+    local customVariables = getPlayerMountVars(player)
 
     local preferredMount = customVariables[DreamMountPreferredMountKey]
     if not preferredMount then
@@ -1691,7 +1682,7 @@ function DreamMountFunctions:summonCreatureMount(pid, _)
     mountLog(Format(DreamMountMountSummonSpawnedStr,
                     mountName,
                     player.name,
-                    playerData.location.cell,
+                    player.data.location.cell,
                     customVariables[DreamMountSummonRefNumKey]))
 end
 
@@ -1720,8 +1711,7 @@ end
 -- since they'll be called with self as an argument whether we want them to or not
 function DreamMountFunctions.trackPlayerMountCell(_, _, pid, _)
     local player = Players[pid]
-    if not player or not player:IsLoggedIn() then return end
-    local customVariables = player.data.customVariables
+    local customVariables = getPlayerMountVars(player)
 
     ReadReceivedActorList()
     for actorIndex = 0, GetActorListSize() - 1 do
@@ -1734,8 +1724,7 @@ end
 
 function DreamMountFunctions:onMountDied(_, pid, _)
     local player = Players[pid]
-    if not player or not player:IsLoggedIn() then return end
-    local customVariables = player.data.customVariables
+    local customVariables = getPlayerMountVars(player)
 
     ReadReceivedActorList()
     for actorIndex = 0, GetActorListSize() - 1 do
@@ -1780,7 +1769,7 @@ function DreamMountFunctions.handleMountActivation(_, _, _, cellDescription, obj
     local firstIndex, firstObject = next(objects)
     local activatingPlayer = Players[firstObject.activatingPid]
     local activatingName = activatingPlayer.name
-    local mountRefNum = activatingPlayer.data.customVariables[DreamMountSummonRefNumKey]
+    local mountRefNum = getPlayerMountVars(activatingPlayer)[DreamMountSummonRefNumKey]
     local owningPlayer = MountRefs[firstIndex]
 
     if not mountRefNum or not owningPlayer then
