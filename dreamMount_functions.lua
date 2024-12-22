@@ -91,6 +91,35 @@ local MountSlotMap = {
     [ShirtMountType] = "SHIRT",
 }
 
+local BodyPart = {
+    Slots = {
+        Head = 0,
+        Hair = 1,
+        Neck = 2,
+        Chest = 3,
+        Groin = 4,
+        Hand = 5,
+        Wrist = 6,
+        Forearm = 7,
+        Upperarm = 8,
+        Foot = 9,
+        Ankle = 10,
+        Knee = 11,
+        Upperleg = 12,
+        Clavicle = 13,
+        Tail = 14,
+    },
+    Flags = {
+        Female = 1,
+        Unplayable = 2,
+    },
+    Types = {
+        Skin = 0,
+        Clothing = 1,
+        Armor = 2,
+    },
+}
+
 -- Paths
 local DefaultKeyName = "Reins"
 local DreamMountConfigPath = 'custom/dreamMountConfig.json'
