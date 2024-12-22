@@ -5,6 +5,7 @@ local Traceback = debug.traceback
 local Uppercase = string.upper
 
 -- TES3MP Functions
+local AddBodyPartRecord = packetBuilder.AddBodyPartRecord
 local AddContainerItem = tes3mp.AddContainerItem
 local AddContainerRecord = packetBuilder.AddContainerRecord
 local AddCreatureRecord = packetBuilder.AddCreatureRecord
@@ -66,6 +67,7 @@ local SlowSave = jsonInterface.save
 local AddToInventory = enumerations.inventory.ADD
 local AIFollow = enumerations.ai.FOLLOW
 local BarterDialogue = enumerations.dialogueChoice.BARTER
+local BodyPartRecord = enumerations.recordType.BODYPART
 local ContainerRecordType = enumerations.recordType.CONTAINER
 local ContainerSet = enumerations.container.SET
 local CreatureRecordType = enumerations.recordType.CREATURE
@@ -200,6 +202,7 @@ local DreamMountImpossibleMountNameErr = "All mounts must have a name!"
 local DreamMountImpossibleAttributeIDErr = "Invalid attribute ID provided: %s!"
 local DreamMountImpossibleAttributeNameErr = "Invalid attribute name %s provided!\n%s"
 local DreamMountMissingSummonRefNumErr = "Refnum for player summon was either missing or failed to split!"
+local DreamMountInvalidBodyPartDataErr = "Id and model fields are required for all bodypart instances!"
 
 -- CustomVariables index keys
 local DreamMountVarTable = 'dreamMountVars'
@@ -494,6 +497,35 @@ local DreamMountMerchantsDefault = {
         capacity = 1,
         selection = { 2 }
     },
+}
+
+-- the part field is hardcoded to 14 (tail) and refers to the actual bodypart slot used
+-- Subtype refers to skin/armor/clothing and is 1 (clothing)
+local MountBodyPartsDefault = {
+    {
+        id = "dm_mechagizka",
+        model = "s3/mount/gizka/mechagizka.nif",
+    },
+    {
+        id = "dm_orangegizka",
+        model = "s3/mount/gizka/gizkaora.nif",
+    },
+    {
+        id = "dm_orangeandblackgizka",
+        model = "s3/mount/gizka/gizkaorabl.nif",
+    },
+    {
+        id = "dm_orangeandblackgizka2",
+        model = "s3/mount/gizka/gizkaorabl2.nif"
+    },
+    {
+        id = "dm_orangeandgreengizka",
+        model = "s3/mount/gizka/gizkaoragr.nif"
+    },
+    {
+        id = "dm_redgizka",
+        model = "s3/mount/gizka/gizkared.nif",
+    }
 }
 
 local KeyItemTemplate = {
@@ -1262,6 +1294,44 @@ function DreamMountFunctions:reloadMountMerchants(_, _, cellDescription, objects
     end
 end
 
+-- !!!!!!!
+-- NOTE: Don't forget to store this data in a json file and reload it like the others!!!
+-- !!!!!!!
+function DreamMountFunctions.createBodyPartRecords(firstPid)
+    local partRecords = RecordStores['bodypart']
+    local permanentParts = partRecords.data.permanentRecords
+
+    if firstPid then
+        ClearRecords()
+        SetRecordType(BodyPartRecord)
+    end
+
+    local clothingType = BodyPart.Types.Clothing
+    local tailSlot = BodyPart.Slots.Tail
+
+    local partsSaved = 0
+    for _, partData in ipairs(MountBodyPartsDefault) do
+        assert(partData.id and partData.model, DreamMountInvalidBodyPartDataErr)
+        local newPartId = partData.id
+        local newPart = {
+            subtype = clothingType,
+            part = tailSlot,
+            model = partData.model
+        }
+
+        permanentParts[newPartId] = newPart
+        partsSaved = partsSaved + 1
+
+        if firstPid then
+            AddBodyPartRecord(newPartId, newPart)
+        end
+    end
+
+    partRecords:Save()
+
+    if firstPid and partsSaved > 0 then SendRecordDynamic(firstPid, true) end
+end
+
 function DreamMountFunctions:createKeyRecords(firstPid)
     local miscRecords = RecordStores['miscellaneous']
     local permanentMiscRecords = miscRecords.data.permanentRecords
@@ -1748,6 +1818,7 @@ function DreamMountFunctions:initMountData()
     self:loadMountConfig()
     self:createMountSpells(firstPlayer)
     self:createKeyRecords(firstPlayer)
+    self.createBodyPartRecords(firstPlayer)
     createScriptRecords()
 end
 
