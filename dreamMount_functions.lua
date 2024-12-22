@@ -871,9 +871,9 @@ local function createPetRecord(petRecordInput)
         magicka = round(playerPetData.magickaPct * playerStats.magickaBase),
         fatigue = round(playerPetData.fatiguePct * playerStats.fatigueBase),
         level = round(petLevel),
-        damageChop = { min = (chopMax * playerPetData.chopMinDmgPct), max = chopMax },
-        damageSlash = { min = (slashMax * playerPetData.slashMinDmgPct), max = slashMax },
-        damageThrust = { min = (thrustMax * playerPetData.thrustMinDmgPct), max = thrustMax },
+        damageChop = { min = round(chopMax * playerPetData.chopMinDmgPct), max = chopMax },
+        damageSlash = { min = round(slashMax * playerPetData.slashMinDmgPct), max = slashMax },
+        damageThrust = { min = round(thrustMax * playerPetData.thrustMinDmgPct), max = thrustMax },
     }
 
     creatureRecords[petId] = petRecord
