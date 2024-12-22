@@ -826,6 +826,11 @@ local function sendCreatureAttributePacket(attributePacketData)
     }
 
     for attributeName, attributeValue in pairs(playerPetData.attributes or {}) do
+        assert(AttributeNames[string.upper(attributeName)],
+            Format("Invalid attribute name %s provided!\n%s",
+                attributeName,
+                Traceback(3)))
+
         local attributeSetter = Format("set%s %s", attributeName, attributeValue)
         addObjectInPlayerCellToObjectList(objectData)
         tes3mp.SetObjectListConsoleCommand(attributeSetter)
