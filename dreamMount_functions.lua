@@ -1372,8 +1372,8 @@ function DreamMountFunctions:createClothingRecords(firstPid)
 
     local clothesSaved = 0
     for _, clothingData in ipairs(MountClothingDefault) do
-        assert(clothingData.id and clothingData.model and clothingData.partId,
-               Err.InvalidBodyPartDataErr)
+        assert(clothingData.id and clothingData.name and clothingData.partId,
+               Err.InvalidClothingDataErr .. Traceback())
 
         -- We assume parts has only one part in it.
         -- Not ideal, but neither is assigning everything to the tail slot.

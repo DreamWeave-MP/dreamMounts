@@ -26,5 +26,6 @@ return {
     ImpossibleAttributeIDErr = "Invalid attribute ID provided: %s!",
     ImpossibleAttributeNameErr = "Invalid attribute name %s provided!\n%s",
     MissingSummonRefNumErr = "Refnum for player summon was either missing or failed to split!",
-    InvalidBodyPartDataErr = "Id and model fields are required for all bodypart instances!",
+    InvalidBodyPartDataErr = "Id and model fields are required for all bodypart instances!\n",
+    InvalidClothingDataErr = "Id, name, and partId fields are required for all clothing instances!\n",
   }
