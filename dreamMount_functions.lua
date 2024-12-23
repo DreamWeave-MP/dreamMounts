@@ -1317,7 +1317,7 @@ function DreamMountFunctions:reloadMountMerchants(_, _, cellDescription, objects
     local cellRef = objectData[actorIndex]
     local currentInventory = cellRef.inventory
 
-    assert(cellRef, "Unable to locate actor by index in this cell!\n" .. Traceback(3))
+    assert(cellRef, Err.MerchantNotInCell .. Traceback(3))
     assert(objectData, Format(Err.NilObjectDataErr, Traceback(3)))
     assert(currentInventory, Format(Err.NilInventoryErr, Traceback(3)))
 

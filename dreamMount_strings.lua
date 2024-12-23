@@ -7,6 +7,7 @@ return {
     CreatePetNoPlayerErr = "No player was provided to create the pet record!\n",
     DespawnNoPlayerErr = "despawnMountSummon was called without providing a player!\n",
     InvalidSpellEffectErrorStr = 'Cannot create a spell effect with no magnitude!\n',
+    MerchantNotInCell = "Unable to locate actor by index in this cell!\n",
     MissingMountName = 'No mount name!',
     MountDoesNotExistErr = "%s's preferred mount does not exist in the mount config map!",
     NilCellErr = "Unable to read cell in reloadMountMerchants call!\n%s",
