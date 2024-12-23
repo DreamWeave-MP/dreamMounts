@@ -74,11 +74,14 @@ local CreatureRecordType = enumerations.recordType.CREATURE
 local EquipEnums = enumerations.equipment
 local FortifyAttribute = enumerations.effects.FORTIFY_ATTRIBUTE
 local FortifyFatigue = enumerations.effects.FORTIFY_FATIGUE
+local LoadedCells = LoadedCells
+local RecordStores = RecordStores
 local RemoveFromInventory = enumerations.inventory.REMOVE
 local RestoreFatigue = enumerations.effects.RESTORE_FATIGUE
 local Players = Players
 local MiscRecordType = enumerations.recordType.MISCELLANEOUS
 local SpellRecordType = enumerations.recordType.SPELL
+local WorldInstance = WorldInstance
 
 -- Local Constants
 local DreamMountAdminRankRequired = 2
