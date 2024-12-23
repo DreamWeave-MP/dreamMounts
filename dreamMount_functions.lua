@@ -83,7 +83,6 @@ local RestoreFatigue = enumerations.effects.RESTORE_FATIGUE
 local Players = Players
 local MiscRecordType = enumerations.recordType.MISCELLANEOUS
 local SpellRecordType = enumerations.recordType.SPELL
-local WorldInstance = WorldInstance
 
 -- Local Constants
 local DreamMountAdminRankRequired = 2
