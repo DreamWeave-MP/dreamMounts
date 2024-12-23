@@ -6,6 +6,7 @@ local Uppercase = string.upper
 
 -- TES3MP Functions
 local AddBodyPartRecord = packetBuilder.AddBodyPartRecord
+local AddClothingRecord = packetBuilder.AddClothingRecord
 local AddContainerItem = tes3mp.AddContainerItem
 local AddContainerRecord = packetBuilder.AddContainerRecord
 local AddCreatureRecord = packetBuilder.AddCreatureRecord
@@ -68,6 +69,7 @@ local AddToInventory = enumerations.inventory.ADD
 local AIFollow = enumerations.ai.FOLLOW
 local BarterDialogue = enumerations.dialogueChoice.BARTER
 local BodyPartRecord = enumerations.recordType.BODYPART
+local ClothingRecord = enumerations.recordType.CLOTHING
 local ContainerRecordType = enumerations.recordType.CONTAINER
 local ContainerSet = enumerations.container.SET
 local CreatureRecordType = enumerations.recordType.CREATURE
@@ -97,6 +99,13 @@ local MountSlotMap = {
 }
 
 local BodyPart = {
+    -- Slots as used by bodypart records
+    -- Since clothing and armor records *both*
+    -- Have a part assigned specifically to a bodypart,
+    -- I don't understand what the point of having bodyparts
+    -- Be associated with specific parts is
+    -- Must be some implementation detail related to
+    -- Tying all of the assets together?
     Slots = {
         Head = 0,
         Hair = 1,
@@ -113,6 +122,7 @@ local BodyPart = {
         Upperleg = 12,
         Clavicle = 13,
         Tail = 14,
+        LENGTH = 15,
     },
     Flags = {
         Female = 1,
@@ -123,6 +133,75 @@ local BodyPart = {
         Clothing = 1,
         Armor = 2,
     },
+}
+
+--- The specific type of clothing or armor which a record uses.
+--- This is basically *only* the item slot which is occupied.
+--- It has no bearing at all on what visuals are displayed,
+--- only decided what items this one conflicts with.
+local ClothingTypes = {
+    Pants = 0,
+    Shoes = 1,
+    Shirt = 2,
+    Belt = 3,
+    Robe = 4,
+    RGlove = 5,
+    LGlove = 6,
+    Skirt = 7,
+    Ring = 8,
+    Amulet = 9,
+    LENGTH = 10,
+}
+
+local ArmorTypes = {
+    Helmet = 0,
+    Cuirass = 1,
+    LPauldron = 2,
+    RPauldron = 3,
+    Greaves = 4,
+    Boots = 5,
+    LGauntlet = 6,
+    RGauntlet = 7,
+    Shield = 8,
+    LBracer = 9,
+    RBracer = 10,
+    LENGTH = 11,
+}
+
+-- This table represents all of the bodypart slots,
+-- which a single body part may occupy,
+-- inside of a clothing or armor record.
+-- It has NO other relation to bodypart records whatsoever.
+-- Check BodyParts for those.
+local PartReferenceSlots = {
+    Head = 0,
+    Hair = 1,
+    Neck = 2,
+    Cuirass = 3,
+    Groin = 4,
+    Skirt = 5,
+    RHand = 6,
+    LHand = 7,
+    RWrist = 8,
+    LWrist = 9,
+    Shield = 10,
+    RForearm = 11,
+    LForearm = 12,
+    RUpperarm = 13,
+    LUpperarm = 14,
+    RFoot = 15,
+    LFoot = 16,
+    RAnkle = 17,
+    LAnkle = 18,
+    RKnee = 19,
+    LKnee = 20,
+    RLeg = 21,
+    LLeg = 22,
+    RPauldron = 23,
+    LPauldron = 24,
+    Weapon = 25,
+    Tail = 26,
+    Count = 27,
 }
 
 -- Paths
@@ -530,6 +609,14 @@ local MountBodyPartsDefault = {
         id = "dm_redgizka",
         model = "s3/mount/gizka/gizkared.nif",
     }
+}
+
+local MountClothingDefault = {
+    {
+        name = "Red Gizka",
+        id = "dm_redgizka_shirt",
+        partId = "dm_redgizka",
+    },
 }
 
 local KeyItemTemplate = {
@@ -1298,6 +1385,48 @@ function DreamMountFunctions:reloadMountMerchants(_, _, cellDescription, objects
     end
 end
 
+function DreamMountFunctions:createClothingRecords(firstPid)
+    local clothingRecords = RecordStores['clothing']
+    local permanentClothing = clothingRecords.data.permanentRecords
+
+    if firstPid then
+        ClearRecords()
+        SetRecordType(ClothingRecord)
+    end
+
+    local shirtType = ClothingTypes.Shirt
+    local tailSlot = PartReferenceSlots.Tail
+
+    local clothesSaved = 0
+    for _, clothingData in ipairs(MountClothingDefault) do
+        assert(clothingData.id and clothingData.model and clothingData.partId,
+               DreamMountInvalidBodyPartDataErr)
+
+        -- We assume parts has only one part in it.
+        -- Not ideal, but neither is assigning everything to the tail slot.
+        local newClothingId = clothingData.id
+        local newClothing = {
+            name = clothingData.name,
+            parts = {{
+                    malePart = clothingData.partId,
+                    partType = tailSlot,
+            }},
+            subtype = shirtType,
+        }
+
+        permanentClothing[newClothingId] = newClothing
+        clothesSaved = clothesSaved + 1
+
+        if firstPid then
+            AddClothingRecord(newClothingId, newClothing)
+        end
+    end
+
+    clothingRecords:Save()
+
+    if firstPid and clothesSaved > 0 then SendRecordDynamic(firstPid, true) end
+end
+
 function DreamMountFunctions:createBodyPartRecords(firstPid)
     local partRecords = RecordStores['bodypart']
     local permanentParts = partRecords.data.permanentRecords
@@ -1828,6 +1957,7 @@ function DreamMountFunctions:initMountData()
     self:createMountSpells(firstPlayer)
     self:createKeyRecords(firstPlayer)
     self:createBodyPartRecords(firstPlayer)
+    self:createClothingRecords(firstPlayer)
     createScriptRecords()
 end
 
