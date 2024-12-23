@@ -92,13 +92,18 @@ local MWScripts = require('custom.dreamMount.dreamMount_mwscripts')
 local DreamMountAdminRankRequired = 2
 local DreamMountsGUIID = 381342
 local DreamMountsMountActivateGUIID = 381343
-local GauntletMountType = 0
 local MountDefaultFatigueRestore = 3
-local ShirtMountType = 1
 
+---@enum MountType
+local MountTypes = {
+    Gauntlet = 0,
+    Shirt = 1,
+}
+
+---@enum EquipEnum
 local MountSlotMap = {
-    [GauntletMountType] = "LEFT_GAUNTLET",
-    [ShirtMountType] = "SHIRT",
+    [MountTypes.Gauntlet] = 'LEFT_GAUNTLET',
+    [MountTypes.Shirt] = 'SHIRT',
 }
 
 local BodyPart = {
@@ -329,7 +334,7 @@ local DreamMountConfigDefault = {
         -- Not a pet
         name = "Red Speeder",
         item = 'sw_speeder1test',
-        mountType = GauntletMountType,
+        mountType = MountTypes.Gauntlet,
         speedBonus = 200,
         key = {
             name = "Red Speeder Key",
@@ -1369,7 +1374,7 @@ function DreamMountFunctions:toggleMount(player)
         local mount = self.mountConfig[mountIndex]
         local mountId = mount.item
         local mountName = mount.name
-        local mountType = mount.mountType or ShirtMountType
+        local mountType = mount.mountType or MountTypes.Shirt
         local mountSlot = MountSlotMap[mountType]
         local mappedEquipSlot = EquipEnums[mountSlot]
 
@@ -1389,10 +1394,10 @@ function DreamMountFunctions:toggleMount(player)
             [mountSlot] = mountId
         }
 
-        if not mountType or mountType == ShirtMountType then
+        if not mountType or mountType == MountTypes.Shirt then
             enableModelOverrideMount(player, charData, mount.model)
             RunConsoleCommandOnPlayer(pid, 'startscript DreamMountForceThirdPerson')
-        elseif mountType == GauntletMountType then
+        elseif mountType == MountTypes.Gauntlet then
             RunConsoleCommandOnPlayer(pid, 'startscript DreamMountMount')
         end
 
@@ -1410,12 +1415,12 @@ function DreamMountFunctions:toggleMount(player)
 
         if not lastMountType then
             error(Format(Err.NoPrevMountErr, player.name))
-        elseif lastMountType == ShirtMountType then
+        elseif lastMountType == MountTypes.Shirt then
             charData.modelOverride = nil
             SetModel(pid, '')
             SendBaseInfo(pid)
             RunConsoleCommandOnPlayer(pid, 'startscript DreamMountDisableForceThirdPerson')
-        elseif lastMountType == GauntletMountType then
+        elseif lastMountType == MountTypes.Gauntlet then
             RunConsoleCommandOnPlayer(pid, 'startscript DreamMountDismount')
         end
 
