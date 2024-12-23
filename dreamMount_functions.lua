@@ -1729,7 +1729,7 @@ function DreamMountFunctions:showPreferredMountMenu(pid, _)
 
     local listHeader = DreamMountPreferredMountString
 
-    local currentPreferredMount = player.data.customVariables[DreamMountPreferredMountKey]
+    local currentPreferredMount = getPlayerMountVars(player)[DreamMountPreferredMountKey]
     if currentPreferredMount then
         local playerMountData = self.mountConfig[currentPreferredMount]
         if playerMountData then
