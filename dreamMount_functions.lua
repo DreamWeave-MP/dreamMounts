@@ -239,13 +239,6 @@ local DreamMountMountMustBeSummonedStr = color.Red .. "Your currently selected m
 local DreamMountPreferredMountMenuHeaderStr = "%s Your current one is: %s"
 local DreamMountNoContainerDataErr = "This mount does not have any container data!\n"
 
--- Patterns
-local DreamMountNoPreferredMountMessage = '%s%s %s'
-local DreamMountSingleVarResetPattern = '%s%s.\n'
-local DreamMountMenuItemPattern = '%s\n%s'
-local DreamMountSpellNameTemplate = '%s Speed Buff'
-local DreamMountLogStr = '[ %s ]: %s'
-
 -- Standard log messages
 local DreamMountCreatedSpellRecordStr = 'Created spell record %s'
 local DreamMountDismountStr = '%s dismounted from mount of type: %s, replacing previously equipped item: %s'
@@ -258,8 +251,7 @@ local DreamMountMountActivatedStr = "%s activated their mount %s with index %s i
 local DreamMountSuccessfulContainerDespawnStr = "Successfully despawned old %s container with index %s for player %s"
 
 -- Error Strings
-local Err = require('custom.dreamMount.dreamMount_strings')
-
+local Err, Patterns = unpack(require('custom.dreamMount.dreamMount_strings'))
 -- CustomVariables index keys
 local DreamMountVarTable = 'dreamMountVars'
 local DreamMountEnabledKey = 'isMounted'
@@ -605,7 +597,7 @@ local DreamMountFunctions = {
 }
 
 local function mountLog(message)
-    print(Format(DreamMountLogStr, DreamMountLogPrefix, message))
+    print(Format(Patterns.LogStr, DreamMountLogPrefix, message))
 end
 
 local function getKeyTemplate(mountData)
@@ -1067,7 +1059,7 @@ local function clearCustomVarsForPlayer(player)
     if not player or not player:IsLoggedIn() then return end
     DreamMountFunctions:clearCustomVariables(player)
     SendMessage(player.pid,
-                Format(DreamMountSingleVarResetPattern
+                Format(Patterns.SingleVarReset
                        , DreamMountResetVarsString
                        , player.name)
                 , false)
@@ -1481,7 +1473,7 @@ function DreamMountFunctions:createMountMenuString(player)
     for _, MountData in ipairs(self.mountConfig) do
         local keyId = getMountKeyString(MountData)
         if possessedKeys[keyId] then
-            DreamMountListString = Format(DreamMountMenuItemPattern, DreamMountListString,
+            DreamMountListString = Format(Patterns.MenuItem, DreamMountListString,
                 MountData.name or Err.MissingMountName)
         end
     end
@@ -1501,7 +1493,7 @@ function DreamMountFunctions:toggleMount(player)
 
     if not isMounted then
         if not mountIndex then
-            return player:Message(Format(DreamMountNoPreferredMountMessage,
+            return player:Message(Format(Patterns.NoPreferredMountMessage,
                 color.Yellow, player.name, DreamMountNoPreferredMountStr))
         end
 
@@ -1652,7 +1644,7 @@ function DreamMountFunctions:clearCustomVariablesCommand(pid, cmd)
             playersWhoReset[#playersWhoReset + 1] = player.name
         end
         SendMessage(pid
-                    , Format(DreamMountSingleVarResetPattern
+                    , Format(Patterns.SingleVarReset
                              , DreamMountResetVarsString
                              , Concat(playersWhoReset, ','))
                     , false)
@@ -1825,7 +1817,7 @@ function DreamMountFunctions:getPlayerMountSummon(player)
 
     local preferredMount = customVariables[DreamMountPreferredMountKey]
     if not preferredMount then
-        return player:Message(Format(DreamMountNoPreferredMountMessage,
+        return player:Message(Format(Patterns.NoPreferredMountMessage,
                 color.Yellow, playerName, DreamMountNoPreferredMountStr))
     end
 
@@ -1868,7 +1860,7 @@ function DreamMountFunctions:summonCreatureMount(pid, _)
 
     local preferredMount = customVariables[DreamMountPreferredMountKey]
     if not preferredMount then
-        return player:Message(Format(DreamMountNoPreferredMountMessage,
+        return player:Message(Format(Patterns.NoPreferredMountMessage,
             color.Yellow, player.name, DreamMountNoPreferredMountStr))
     end
 
@@ -1937,13 +1929,13 @@ end
 ---@param mountIndex integer
 ---@return string
 function DreamMountFunctions:getMountSpellIdString(mountIndex)
-    return Format(DreamMountSpellNameTemplate, self.mountConfig[mountIndex].item)
+    return Format(Patterns.SpellNameTemplate, self.mountConfig[mountIndex].item)
 end
 
 ---@param mountIndex integer
 ---@return string
 function DreamMountFunctions:getMountSpellNameString(mountIndex)
-    return Format(DreamMountSpellNameTemplate, self.mountConfig[mountIndex].name)
+    return Format(Patterns.SpellNameTemplate, self.mountConfig[mountIndex].name)
 end
 
 -- Include an extra unused param on table functions which don't actually use self,

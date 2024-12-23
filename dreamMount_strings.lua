@@ -1,4 +1,6 @@
 return {
+  {
+    -- Errors
     CreatePetNoIdErr = "No petId was provided to create the pet record!\n",
     CreatePetNoMountNameErr = "No mountName was provided to create the pet record!\n",
     CreatePetNoPetDataErr = "No playerPetData was provided to create the pet record!\n",
@@ -28,4 +30,13 @@ return {
     MissingSummonRefNumErr = "Refnum for player summon was either missing or failed to split!",
     InvalidBodyPartDataErr = "Id and model fields are required for all bodypart instances!\n",
     InvalidClothingDataErr = "Id, name, and partId fields are required for all clothing instances!\n",
+  },
+  {
+    -- Patterns
+    LogStr = '[ %s ]: %s',
+    MenuItem = '%s\n%s',
+    NoPreferredMountMessage = '%s%s %s',
+    SingleVarReset = '%s%s.\n',
+    SpellNameTemplate = '%s Speed Buff',
   }
+}
