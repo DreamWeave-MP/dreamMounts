@@ -241,19 +241,8 @@ local DreamMountMountMustBeSummonedStr = color.Red .. "Your currently selected m
 local DreamMountPreferredMountMenuHeaderStr = "%s Your current one is: %s"
 local DreamMountNoContainerDataErr = "This mount does not have any container data!\n"
 
--- Standard log messages
-local DreamMountCreatedSpellRecordStr = 'Created spell record %s'
-local DreamMountDismountStr = '%s dismounted from mount of type: %s, replacing previously equipped item: %s'
-local DreamMountLogPrefix = 'DreamMount'
-local DreamMountMountStr = '%s mounted %s'
-local DreamMountDismissedStr = "%s dismissed their mount!"
-local DreamMountMountSummonSpawnedStr = "Spawned mount summon %s for player %s in %s as object %s"
-local DreamMountRemovingRecordStr = "Removing %s from recordStore on behalf of %s"
-local DreamMountMountActivatedStr = "%s activated their mount %s with index %s in cell %s"
-local DreamMountSuccessfulContainerDespawnStr = "Successfully despawned old %s container with index %s for player %s"
-
--- Error Strings
-local Err, Patterns = unpack(require('custom.dreamMount.dreamMount_strings'))
+---@diagnostic disable-next-line: deprecated
+local Err, Patterns, Log = unpack(require('custom.dreamMount.dreamMount_strings'))
 -- CustomVariables index keys
 local DreamMountVarTable = 'dreamMountVars'
 local DreamMountEnabledKey = 'isMounted'
@@ -599,7 +588,7 @@ local DreamMountFunctions = {
 }
 
 local function mountLog(message)
-    print(Format(Patterns.LogStr, DreamMountLogPrefix, message))
+    print(Format(Patterns.LogStr, Log.LogPrefix, message))
 end
 
 local function getKeyTemplate(mountData)
@@ -793,7 +782,7 @@ function DreamMountFunctions:addMountSpellEffect(effects, spellId, spellName, pe
 
     permanentSpells[spellId] = mountSpell
 
-    mountLog(Format(DreamMountCreatedSpellRecordStr, spellString))
+    mountLog(Format(Log.CreatedSpellRecordStr, spellString))
 
     AddRecordTypeToPacket(spellId, mountSpell, 'spell')
 end
@@ -816,7 +805,7 @@ function DreamMountFunctions:despawnBagRef(player)
     containerData.cell = nil
     containerData.index = nil
 
-    mountLog(Format(DreamMountSuccessfulContainerDespawnStr,
+    mountLog(Format(Log.SuccessfulContainerDespawnStr,
                     self:getContainerRecordId(player),
                     containerIndex,
                     player.name))
@@ -933,7 +922,7 @@ function DreamMountFunctions:despawnMountSummon(player)
     if currentSummons and currentSummons[mountName] then
         local summonToRemove = currentSummons[mountName]
 
-        mountLog(Format(DreamMountRemovingRecordStr, summonToRemove, player.name))
+        mountLog(Format(Log.RemovingRecordStr, summonToRemove, player.name))
 
         local creatureRecordStore = RecordStores["creature"]
         local creatureRecords = creatureRecordStore.data.permanentRecords
@@ -1285,7 +1274,7 @@ function DreamMountFunctions:handleMountActivateMenu(pid, activateMenuChoice)
     if activateMenuChoice == 0 then
         self:activateMountContainer(player)
     elseif activateMenuChoice == 1 then
-        mountLog(Format(DreamMountDismissedStr, player.name))
+        mountLog(Format(Log.DismissedStr, player.name))
         self:despawnMountSummon(player)
         self:despawnBagRef(player)
     elseif activateMenuChoice == 2 then
@@ -1529,7 +1518,7 @@ function DreamMountFunctions:toggleMount(player)
             RunConsoleCommandOnPlayer(pid, 'startscript DreamMountMount')
         end
 
-        mountLog(Format(DreamMountMountStr, player.name, mountName))
+        mountLog(Format(Log.MountStr, player.name, mountName))
 
         customVariables[DreamMountPrevItemId] = replaceItem
         customVariables[DreamMountPrevMountTypeKey] = mountType
@@ -1561,7 +1550,7 @@ function DreamMountFunctions:toggleMount(player)
             customVariables[DreamMountPrevItemId] = nil
         end
 
-        mountLog(Format(DreamMountDismountStr, player.name, lastMountType, prevItemId))
+        mountLog(Format(Log.DismountStr, player.name, lastMountType, prevItemId))
         customVariables[DreamMountPrevItemId] = nil
         customVariables[DreamMountPrevMountTypeKey] = nil
         customVariables[DreamMountEnabledKey] = false
@@ -1910,7 +1899,7 @@ function DreamMountFunctions:summonCreatureMount(pid, _)
     toggleSpell(auraId, player)
     customVariables[DreamMountPrevAuraId] = auraId
 
-    mountLog(Format(DreamMountMountSummonSpawnedStr,
+    mountLog(Format(Log.MountSummonSpawnedStr,
                     mountName,
                     player.name,
                     player.data.location.cell,
@@ -2011,7 +2000,7 @@ function DreamMountFunctions.handleMountActivation(_, _, _, cellDescription, obj
         return MessageBox(activatingPlayer.pid, -1, DreamMountUnownedMountActivateStr)
     end
 
-    mountLog(Format(DreamMountMountActivatedStr,
+    mountLog(Format(Log.MountActivatedStr,
                  activatingName,
                  firstObject.refId,
                  firstIndex,

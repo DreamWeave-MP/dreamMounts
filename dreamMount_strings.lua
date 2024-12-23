@@ -39,5 +39,17 @@ return {
     NoPreferredMountMessage = '%s%s %s',
     SingleVarReset = '%s%s.\n',
     SpellNameTemplate = '%s Speed Buff',
+  },
+  {
+    -- Log Messages
+    CreatedSpellRecordStr = 'Created spell record %s',
+    DismissedStr = "%s dismissed their mount!",
+    DismountStr = '%s dismounted from mount of type: %s, replacing previously equipped item: %s',
+    LogPrefix = 'DreamMount',
+    MountActivatedStr = "%s activated their mount %s with index %s in cell %s",
+    MountStr = '%s mounted %s',
+    MountSummonSpawnedStr = "Spawned mount summon %s for player %s in %s as object %s",
+    RemovingRecordStr = "Removing %s from recordStore on behalf of %s",
+    SuccessfulContainerDespawnStr = "Successfully despawned old %s container with index %s for player %s",
   }
 }
