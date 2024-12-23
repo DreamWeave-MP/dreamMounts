@@ -206,13 +206,8 @@ local PartReferenceSlots = {
     Count = 27,
 }
 
--- Paths
-local DefaultKeyName = "Reins"
-local DreamMountConfigPath = 'custom/dreamMountConfig.json'
-local DreamMerchantConfigPath = 'custom/dreamMountMerchants.json'
-local DreamMountBodyPartConfigPath = 'custom/dreamMountBodyParts.json'
-local GuarMountFilePathStr = 'rot/anim/%s.nif'
 
+local DefaultKeyName = "Reins"
 -- UI Messages
 local DreamMountConfigReloadedMessage =
     Format(
@@ -242,7 +237,7 @@ local DreamMountPreferredMountMenuHeaderStr = "%s Your current one is: %s"
 local DreamMountNoContainerDataErr = "This mount does not have any container data!\n"
 
 ---@diagnostic disable-next-line: deprecated
-local Err, Patterns, Log = unpack(require('custom.dreamMount.dreamMount_strings'))
+local Paths, Err, Patterns, Log = unpack(require('custom.dreamMount.dreamMount_strings'))
 -- CustomVariables index keys
 local DreamMountVarTable = 'dreamMountVars'
 local DreamMountEnabledKey = 'isMounted'
@@ -605,7 +600,7 @@ local function getKeyTemplate(mountData)
 end
 
 local function getFilePath(model)
-    return Format(GuarMountFilePathStr, model)
+    return Format(Paths.AnimRigPath, model)
 end
 
 local function actorPacketUniqueIndex(actorIndex)
@@ -1593,21 +1588,25 @@ function DreamMountFunctions:logConfig()
 end
 
 function DreamMountFunctions:loadMountConfig()
-    self.mountConfig = Load(DreamMountConfigPath) or DreamMountConfigDefault
+    local mountConfigPath = Paths.MountConfigPath
+    local merchantConfigPath = Paths.MerchantConfigPath
+    local bodyPartConfigPath = Paths.BodyPartConfigPath
+
+    self.mountConfig = Load(mountConfigPath) or DreamMountConfigDefault
 
     if self.mountConfig == DreamMountConfigDefault then
-        Save(DreamMountConfigPath, self.mountConfig)
+        Save(mountConfigPath, self.mountConfig)
     end
     assert(#self.mountConfig >= 1, Err.EmptyMountConfigErr .. Traceback(3))
 
-    self.mountMerchants = Load(DreamMerchantConfigPath) or DreamMountMerchantsDefault
+    self.mountMerchants = Load(merchantConfigPath) or DreamMountMerchantsDefault
     if self.mountMerchants == DreamMountMerchantsDefault then
-        Save(DreamMerchantConfigPath, self.mountMerchants)
+        Save(merchantConfigPath, self.mountMerchants)
     end
 
-    self.mountParts = Load(DreamMountBodyPartConfigPath) or MountBodyPartsDefault
+    self.mountParts = Load(bodyPartConfigPath) or MountBodyPartsDefault
     if self.mountParts == MountBodyPartsDefault then
-        Save(DreamMountBodyPartConfigPath, self.mountParts)
+        Save(bodyPartConfigPath, self.mountParts)
     end
 
     self:logConfig()
@@ -1725,8 +1724,8 @@ end
 
 function DreamMountFunctions:slowSaveOnEmptyWorld()
     if next(Players) then return end
-    SlowSave(DreamMountConfigPath, self.mountConfig)
-    SlowSave(DreamMerchantConfigPath, self.mountMerchants)
+    SlowSave(Paths.MountConfigPath, self.mountConfig)
+    SlowSave(Paths.MerchantConfigPath, self.mountMerchants)
 end
 
 function DreamMountFunctions:toggleMountCommand(pid)
@@ -1738,9 +1737,9 @@ end
 function DreamMountFunctions.defaultMountConfig(_, pid)
     if not DreamMountFunctions.validateUser(pid) then return end
 
-    SlowSave(DreamMountConfigPath, DreamMountConfigDefault)
-    SlowSave(DreamMerchantConfigPath, DreamMountMerchantsDefault)
-    SlowSave(DreamMountBodyPartConfigPath, MountBodyPartsDefault)
+    SlowSave(Paths.MountConfigPath, DreamMountConfigDefault)
+    SlowSave(Paths.MerchantConfigPath, DreamMountMerchantsDefault)
+    SlowSave(Paths.BodyPartConfigPath, MountBodyPartsDefault)
 
     SendMessage(pid, DreamMountDefaultConfigSavedString, false)
 end

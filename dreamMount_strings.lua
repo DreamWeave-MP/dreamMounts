@@ -1,5 +1,12 @@
 return {
   {
+    -- Paths
+    AnimRigPath = 'rot/anim/%s.nif',
+    BodyPartConfigPath = 'custom/dreamMountBodyParts.json',
+    MerchantConfigPath = 'custom/dreamMountMerchants.json',
+    MountConfigPath = 'custom/dreamMountConfig.json',
+  },
+  {
     -- Errors
     CreatePetNoIdErr = "No petId was provided to create the pet record!\n",
     CreatePetNoMountNameErr = "No mountName was provided to create the pet record!\n",
