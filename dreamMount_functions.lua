@@ -152,6 +152,9 @@ local ClothingTypes = {
     LENGTH = 10,
 }
 
+-- We don't currently use armor types, but we might later and
+-- I don't feel like drawing the enums out again
+---@diagnostic disable-next-line: unused-local
 local ArmorTypes = {
     Helmet = 0,
     Cuirass = 1,
