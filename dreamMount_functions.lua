@@ -258,34 +258,7 @@ local DreamMountMountActivatedStr = "%s activated their mount %s with index %s i
 local DreamMountSuccessfulContainerDespawnStr = "Successfully despawned old %s container with index %s for player %s"
 
 -- Error Strings
-local DreamMountCreatePetNoIdErr = "No petId was provided to create the pet record!\n"
-local DreamMountCreatePetNoMountNameErr = "No mountName was provided to create the pet record!\n"
-local DreamMountCreatePetNoPetDataErr = "No playerPetData was provided to create the pet record!\n"
-local DreamMountCreatePetNoPlayerErr = "No player was provided to create the pet record!\n"
-local DreamMountDespawnNoPlayerErr = "despawnMountSummon was called without providing a player!\n"
-local DreamMountInvalidSpellEffectErrorStr = 'Cannot create a spell effect with no magnitude!\n'
-local DreamMountMissingMountName = 'No mount name!'
-local DreamMountMountDoesNotExistErr = "%s's preferred mount does not exist in the mount config map!"
-local DreamMountNilCellErr = "Unable to read cell in reloadMountMerchants call!\n%s"
-local DreamMountNilObjectDataErr = "Received nil objectData in reloadMountMerchantsCall!\n%s"
-local DreamMountNilInventoryErr = "Received nil currentInventory in reloadMountMerchantsCall!\n%s"
-local DreamMountNoInventoryErr = 'No player inventory was provided to createMountMenuString!\n%s'
-local DreamMountNoPidProvided = 'No PlayerID provided!\n%s'
-local DreamMountNoPrevMountErr = 'No previous mount to remove for player %s, aborting!'
-local DreamMountShouldHaveValidMountErr = "Player shouldn't have been able to open this menu without a valid mount!"
-local DreamMountUnloggedPlayerSummonErr = "Cannot summon a mount for an unlogged player!"
-local DreamMountEmptyMountConfigErr = "Empty mount config found on reload!\n"
-local DreamMountActivateChoiceFailedToConvertErr = "failed to convert activation menu choice to a number, or none provided!"
-local DreamMountNoContainerForUnloggedPlayerErr = "Cannot activate container for an unlogged player!"
-local DreamMountImpossibleActivationErr = "You can't have activated this object if you don't have a pet assigned!"
-local DreamMountImpossibleUnloadedCellErr = "The cellDescription requested isn't loaded! This should never happen!\n"
-local DreamMountImpossibleObjectDataErr = "Object data should have been initialized already, but it isn'! Bailing!\n"
-local DreamMountImpossibleRefidErr = "Found null or empty refId during inventory iteration!\n"
-local DreamMountImpossibleMountNameErr = "All mounts must have a name!"
-local DreamMountImpossibleAttributeIDErr = "Invalid attribute ID provided: %s!"
-local DreamMountImpossibleAttributeNameErr = "Invalid attribute name %s provided!\n%s"
-local DreamMountMissingSummonRefNumErr = "Refnum for player summon was either missing or failed to split!"
-local DreamMountInvalidBodyPartDataErr = "Id and model fields are required for all bodypart instances!"
+local Err = require('custom.dreamMount.dreamMount_strings')
 
 -- CustomVariables index keys
 local DreamMountVarTable = 'dreamMountVars'
@@ -685,7 +658,7 @@ local function getMountKeyString(mountData)
 end
 
 local function assertPidProvided(pid)
-    assert(pid, Format(DreamMountNoPidProvided, Traceback(3)))
+    assert(pid, Format(Err.NoPidProvided, Traceback(3)))
 end
 
 local function unauthorizedUserMessage(pid)
@@ -696,7 +669,7 @@ end
 ---@param player JSONPlayer
 ---@return table
 local function getPlayerMountVars(player)
-    assert(player and player:IsLoggedIn(), DreamMountUnloggedPlayerSummonErr .. Traceback(3))
+    assert(player and player:IsLoggedIn(), Err.UnloggedPlayerSummonErr .. Traceback(3))
     local customVariables = player.data.customVariables
     if not customVariables[DreamMountVarTable] then customVariables[DreamMountVarTable] = {} end
     return customVariables[DreamMountVarTable]
@@ -738,8 +711,8 @@ local AttributeNames = {
 
 local Effects = {
     FortifyAttribute = function(attributeId, magnitudeMin, magnitudeMax)
-        assert(attributeId >= 0 and attributeId <= 7, Format(DreamMountImpossibleAttributeIDErr, attributeId))
-        assert(magnitudeMin, DreamMountInvalidSpellEffectErrorStr .. Traceback(3))
+        assert(attributeId >= 0 and attributeId <= 7, Format(Err.ImpossibleAttributeIDErr, attributeId))
+        assert(magnitudeMin, Err.InvalidSpellEffectErrorStr .. Traceback(3))
         return {
             attribute = attributeId,
             id = FortifyAttribute,
@@ -750,7 +723,7 @@ local Effects = {
         }
     end,
     FortifyFatigue = function(magnitudeMin, magnitudeMax)
-        assert(magnitudeMin, DreamMountInvalidSpellEffectErrorStr .. Traceback(3))
+        assert(magnitudeMin, Err.InvalidSpellEffectErrorStr .. Traceback(3))
         return {
             id = FortifyFatigue,
             rangeType = 0,
@@ -760,7 +733,7 @@ local Effects = {
         }
     end,
     RestoreFatigue = function(magnitudeMin, magnitudeMax)
-        assert(magnitudeMin, DreamMountInvalidSpellEffectErrorStr .. Traceback(3))
+        assert(magnitudeMin, Err.InvalidSpellEffectErrorStr .. Traceback(3))
         return {
             id = RestoreFatigue,
             rangeType = 0,
@@ -772,7 +745,7 @@ local Effects = {
 }
 
 local function getPetAuraStrings(mountData)
-    assert(mountData.name ~= nil and mountData.name ~= '', DreamMountImpossibleMountNameErr)
+    assert(mountData.name ~= nil and mountData.name ~= '', Err.ImpossibleMountNameErr)
     return Format("%s_aura", mountData.name):lower(), Format("%s Aura", mountData.name)
 end
 
@@ -838,7 +811,7 @@ function DreamMountFunctions:getMountData(player)
 end
 
 function DreamMountFunctions:despawnBagRef(player)
-    assert(player, DreamMountDespawnNoPlayerErr .. Traceback(3))
+    assert(player, Err.DespawnNoPlayerErr .. Traceback(3))
 
     local containerData = self:getCurrentContainerData(player)
     if not containerData or not containerData.cell or not containerData.index then return end
@@ -902,7 +875,7 @@ function DreamMountFunctions:updateCurrentMountContainer(player)
     SetObjectRefId(containerId)
 
     for _, item in ipairs(containerData.inventory) do
-        assert(item.refId and item.refId ~= '', DreamMountImpossibleRefidErr .. Traceback(3))
+        assert(item.refId and item.refId ~= '', Err.ImpossibleRefidErr .. Traceback(3))
 
         SetContainerItemRefId(item.refId)
         SetContainerItemCount(item.count or 1)
@@ -936,7 +909,7 @@ end
 --- otherwide be really spammy.
 ---@param player JSONPlayer
 function DreamMountFunctions:despawnMountSummon(player)
-    assert(player, DreamMountDespawnNoPlayerErr .. Traceback(3))
+    assert(player, Err.DespawnNoPlayerErr .. Traceback(3))
 
     local customVariables = getPlayerMountVars(player)
     local summonRef = customVariables[DreamMountSummonRefNumKey]
@@ -1010,7 +983,7 @@ local function sendCreatureAttributePacket(attributePacketData)
 
     local playerQueuedCommands = player.consoleCommandsQueued
     local summonSplitIndex = getPlayerMountVars(player)[DreamMountSummonRefNumKey]:split('-')
-    assert(summonSplitIndex, DreamMountMissingSummonRefNumErr)
+    assert(summonSplitIndex, Err.MissingSummonRefNumErr)
     local summonRefNum = summonSplitIndex[1]
     local summonMpNum = summonSplitIndex[2]
 
@@ -1025,7 +998,7 @@ local function sendCreatureAttributePacket(attributePacketData)
     local playerAttributes = player.data.attributes
     for attributeName, attributeValue in pairs(playerPetData.attributes or {}) do
         assert(AttributeNames[Uppercase(attributeName)],
-            Format(DreamMountImpossibleAttributeNameErr,
+            Format(Err.ImpossibleAttributeNameErr,
                 attributeName,
                 Traceback(3)))
 
@@ -1051,7 +1024,7 @@ end
 ---@param player JSONPlayer
 ---@param summonId string generated recordId for the mount summon
 local function spawnMountSummon(player, summonId)
-    assert(player and player:IsLoggedIn(), DreamMountUnloggedPlayerSummonErr)
+    assert(player and player:IsLoggedIn(), Err.UnloggedPlayerSummonErr)
     local pid = player.pid
     local playerCell = player.data.location.cell
     local customVariables = getPlayerMountVars(player)
@@ -1117,10 +1090,10 @@ local function createPetRecord(petRecordInput)
     local player = petRecordInput.player
     local playerStats = player.data.stats
 
-    assert(playerPetData, DreamMountCreatePetNoPetDataErr .. Traceback(3))
-    assert(petId, DreamMountCreatePetNoIdErr .. Traceback(3))
-    assert(player, DreamMountCreatePetNoPlayerErr .. Traceback(3))
-    assert(mountName, DreamMountCreatePetNoMountNameErr .. Traceback(3))
+    assert(playerPetData, Err.CreatePetNoPetDataErr .. Traceback(3))
+    assert(petId, Err.CreatePetNoIdErr .. Traceback(3))
+    assert(player, Err.CreatePetNoPlayerErr .. Traceback(3))
+    assert(mountName, Err.CreatePetNoMountNameErr .. Traceback(3))
 
     local creatureRecordStore = RecordStores["creature"]
     local creatureRecords = creatureRecordStore.data.permanentRecords
@@ -1244,7 +1217,7 @@ function DreamMountFunctions:createContainerServerside(player)
 	local uniqueIndex =  Format("0-%s", mpNum)
 
 	local bagSpawnCell = LoadedCells[cellDescription]
-	assert(bagSpawnCell, DreamMountImpossibleUnloadedCellErr .. debug.traceback(3))
+	assert(bagSpawnCell, Err.ImpossibleUnloadedCellErr .. debug.traceback(3))
 
 	bagSpawnCell:InitializeObjectData(uniqueIndex, targetContainer)
 
@@ -1253,7 +1226,7 @@ function DreamMountFunctions:createContainerServerside(player)
 	local objectData = cellData.objectData
     local targetObject = objectData[uniqueIndex]
 
-	assert(objectData[uniqueIndex], DreamMountImpossibleObjectDataErr .. debug.traceback(3))
+	assert(objectData[uniqueIndex], Err.ImpossibleObjectDataErr .. debug.traceback(3))
 
     targetObject.location = {
         posX = GetPosX(pid),
@@ -1312,8 +1285,8 @@ function DreamMountFunctions:handleMountActivateMenu(pid, activateMenuChoice)
     activateMenuChoice = tonumber(activateMenuChoice)
     local player = Players[pid]
 
-    assert(activateMenuChoice, DreamMountActivateChoiceFailedToConvertErr)
-    assert(player and player:IsLoggedIn(), DreamMountNoContainerForUnloggedPlayerErr)
+    assert(activateMenuChoice, Err.ActivateChoiceFailedToConvertErr)
+    assert(player and player:IsLoggedIn(), Err.NoContainerForUnloggedPlayerErr)
 
     if activateMenuChoice == 0 then
         self:activateMountContainer(player)
@@ -1324,7 +1297,7 @@ function DreamMountFunctions:handleMountActivateMenu(pid, activateMenuChoice)
     elseif activateMenuChoice == 2 then
         local petCellRef = player.data.customVariables[DreamMountSummonRefNumKey]
         local playerCell = player.data.location.cell
-        assert(petCellRef, DreamMountImpossibleActivationErr)
+        assert(petCellRef, Err.ImpossibleActivationErr)
 
         RunConsoleCommandOnObject(pid, "loopgroup idle6 1 2",
                                   playerCell, petCellRef, true)
@@ -1344,7 +1317,7 @@ function DreamMountFunctions:reloadMountMerchants(_, _, cellDescription, objects
 
     local cell = LoadedCells[cellDescription]
 
-    assert(cell, Format(DreamMountNilCellErr, Traceback(3)))
+    assert(cell, Format(Err.NilCellErr, Traceback(3)))
 
     local objectData = cell.data.objectData
     local reloadInventory = false
@@ -1353,8 +1326,8 @@ function DreamMountFunctions:reloadMountMerchants(_, _, cellDescription, objects
     local currentInventory = cellRef.inventory
 
     assert(cellRef, "Unable to locate actor by index in this cell!\n" .. Traceback(3))
-    assert(objectData, Format(DreamMountNilObjectDataErr, Traceback(3)))
-    assert(currentInventory, Format(DreamMountNilInventoryErr, Traceback(3)))
+    assert(objectData, Format(Err.NilObjectDataErr, Traceback(3)))
+    assert(currentInventory, Format(Err.NilInventoryErr, Traceback(3)))
 
     for _, object in pairs(currentInventory) do
         if KeyRecords[object.refId] then
@@ -1400,7 +1373,7 @@ function DreamMountFunctions:createClothingRecords(firstPid)
     local clothesSaved = 0
     for _, clothingData in ipairs(MountClothingDefault) do
         assert(clothingData.id and clothingData.model and clothingData.partId,
-               DreamMountInvalidBodyPartDataErr)
+               Err.InvalidBodyPartDataErr)
 
         -- We assume parts has only one part in it.
         -- Not ideal, but neither is assigning everything to the tail slot.
@@ -1441,7 +1414,7 @@ function DreamMountFunctions:createBodyPartRecords(firstPid)
 
     local partsSaved = 0
     for _, partData in ipairs(self.mountParts) do
-        assert(partData.id and partData.model, DreamMountInvalidBodyPartDataErr)
+        assert(partData.id and partData.model, Err.InvalidBodyPartDataErr)
         local newPartId = partData.id
         local newPart = {
             subtype = clothingType,
@@ -1496,7 +1469,7 @@ function DreamMountFunctions:createMountMenuString(player)
     local DreamMountListString = DreamMountDefaultListString
     local playerInventory = player.data.inventory
 
-    assert(playerInventory, Format(DreamMountNoInventoryErr, Traceback(3)))
+    assert(playerInventory, Format(Err.NoInventoryErr, Traceback(3)))
 
     local possessedKeys = {}
 
@@ -1509,7 +1482,7 @@ function DreamMountFunctions:createMountMenuString(player)
         local keyId = getMountKeyString(MountData)
         if possessedKeys[keyId] then
             DreamMountListString = Format(DreamMountMenuItemPattern, DreamMountListString,
-                MountData.name or DreamMountMissingMountName)
+                MountData.name or Err.MissingMountName)
         end
     end
 
@@ -1575,7 +1548,7 @@ function DreamMountFunctions:toggleMount(player)
         local lastMountType = customVariables[DreamMountPrevMountTypeKey]
 
         if not lastMountType then
-            error(Format(DreamMountNoPrevMountErr, player.name))
+            error(Format(Err.NoPrevMountErr, player.name))
         elseif lastMountType == ShirtMountType then
             charData.modelOverride = nil
             SetModel(pid, '')
@@ -1642,7 +1615,7 @@ function DreamMountFunctions:loadMountConfig()
     if self.mountConfig == DreamMountConfigDefault then
         Save(DreamMountConfigPath, self.mountConfig)
     end
-    assert(#self.mountConfig >= 1, DreamMountEmptyMountConfigErr .. Traceback(3))
+    assert(#self.mountConfig >= 1, Err.EmptyMountConfigErr .. Traceback(3))
 
     self.mountMerchants = Load(DreamMerchantConfigPath) or DreamMountMerchantsDefault
     if self.mountMerchants == DreamMountMerchantsDefault then
@@ -1706,7 +1679,7 @@ function DreamMountFunctions:setPreferredMount(_, pid, idGui, data)
     if not selection or selection == 0 or selection > #self.mountConfig then return end
 
     local playerListString = self:createMountMenuString(player)
-    assert(playerListString, DreamMountShouldHaveValidMountErr)
+    assert(playerListString, Err.ShouldHaveValidMountErr)
 
     local lineIndex = 0
     local selectedMountName
@@ -1857,7 +1830,7 @@ function DreamMountFunctions:getPlayerMountSummon(player)
     end
 
     local mountData = self.mountConfig[preferredMount]
-    assert(mountData, Format(DreamMountMountDoesNotExistErr, playerName))
+    assert(mountData, Format(Err.MountDoesNotExistErr, playerName))
     local mountRefNum = tostring( WorldInstance:GetCurrentMpNum() + 1 )
 
     return Format("%s_%s_%s_pet", playerName, mountRefNum, mountData.name):lower()
@@ -2019,7 +1992,7 @@ end
 
 function DreamMountFunctions:cleanUpMountOnLogin(_, pid)
     local player = Players[pid]
-    assert(player, DreamMountUnloggedPlayerSummonErr .. '\n' .. Traceback(3))
+    assert(player, Err.UnloggedPlayerSummonErr .. '\n' .. Traceback(3))
     self:despawnBagRef(player)
     self:despawnMountSummon(player)
     dismountIfMounted(player)
