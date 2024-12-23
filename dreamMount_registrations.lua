@@ -1,5 +1,6 @@
 local Format = string.format
 local Traceback = debug.traceback
+local Uppercase = string.upper
 
 local AddSpell = tes3mp.AddSpell
 local ClearSpellbookChanges = tes3mp.ClearSpellbookChanges
@@ -63,7 +64,7 @@ local function updateEquipment(self, equipmentUpdateTable)
   local myInventory = myData.inventory
 
   for equipmentSlot, itemId in pairs(equipmentUpdateTable) do
-    local slotId = EquipEnums[equipmentSlot]
+    local slotId = EquipEnums[Uppercase(equipmentSlot)]
     assert(slotId, Format(DreamMountInvalidEquipSlotErr, equipmentSlot))
     if itemId ~= false and ContainsItem(myInventory, itemId) then
       local targetItem = ItemTemplate
