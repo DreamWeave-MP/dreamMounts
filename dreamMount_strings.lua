@@ -1,3 +1,12 @@
+local Format = string.format
+
+local color = color
+local Green = color.Green
+local Maroon = color.Maroon
+local MediumBlue = color.MediumBlue
+local Navy = color.Navy
+local Red = color.Red
+
 return {
   {
     -- Paths
@@ -58,5 +67,46 @@ return {
     MountSummonSpawnedStr = "Spawned mount summon %s for player %s in %s as object %s",
     RemovingRecordStr = "Removing %s from recordStore on behalf of %s",
     SuccessfulContainerDespawnStr = "Successfully despawned old %s container with index %s for player %s",
+  },
+  {
+    -- UI Messages
+    ActivateMenuChoices = "Open Pack;Dismiss;Pet;Ride;Nothing",
+    ActivateMenuHeader = "What would you like to do with your mount?",
+    ConfigReloadedMessage = Format(
+      '%sMount config reloaded, %smenu reconstructed, %sand spell records remade! %sDreamMount%s has completely reinitialized.\n',
+      MediumBlue,
+      Green,
+      MediumBlue,
+      Navy,
+      Green),
+    DefaultConfigSavedString = Format(
+      '%sSaved default mount config to %sdata/',
+      MediumBlue,
+      Green),
+    DefaultListString = "Cancel",
+    InvalidResetPidErr = "%sInvalid player id provided for variable reset %s!\n",
+    MountMustBeSummonedStr = Red .. "Your currently selected mount must be summoned to use its container!\n",
+    NoContainerDataErr = "This mount does not have any container data!\n",
+    NoMountAvailableStr = Format(
+      '%sYou do not have any mounts available! Seek one out in the world . . .\n',
+      Maroon),
+    NoPreferredMountStr = Format(
+      '%sdoes not have a preferred mount set!\n',
+      Red),
+    NotAPetStr = "%s%s cannot be used as a pet!",
+    PreferredMountMenuHeaderStr = "%s Your current one is: %s",
+    PreferredMountString = 'Select your preferred mount.',
+    ResetNotAllowedErr = "%sYou cannot reset DreamMount Variables for %s!\n",
+    ResetVarsString = Format(
+      '%sReset DreamMount variables for %s',
+      MediumBlue,
+      Green),
+    SameMountStr = "%s%s%s was already your preferred mount!\n",
+    UnauthorizedUserMessage = Format(
+      '%sYou are not authorized to run %sdreamMount %sadmin commands!\n',
+      Red,
+      MediumBlue,
+      Red),
+    UnownedMountActivateStr = Red .. "You cannot activate this mount as it does not belong to you!",
   }
 }

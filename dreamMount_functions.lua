@@ -86,7 +86,7 @@ local SpellRecordType = enumerations.recordType.SPELL
 
 -- Local Constants
 ---@diagnostic disable-next-line: deprecated
-local Paths, Err, Patterns, Log = unpack(require('custom.dreamMount.dreamMount_strings'))
+local Paths, Err, Patterns, Log, UI = unpack(require('custom.dreamMount.dreamMount_strings'))
 local MWScripts = require('custom.dreamMount.dreamMount_mwscripts')
 
 local DreamMountAdminRankRequired = 2
@@ -212,34 +212,6 @@ local PartReferenceSlots = {
 
 
 local DefaultKeyName = "Reins"
--- UI Messages
-local DreamMountConfigReloadedMessage =
-    Format(
-    '%sMount config reloaded, %smenu reconstructed, %sand spell records remade! %sDreamMount%s has completely reinitialized.\n'
-    , color.MediumBlue, color.Green, color.MediumBlue, color.Navy, color.Green)
-local DreamMountDefaultConfigSavedString =
-    Format('%sSaved default mount config to %sdata/%s\n'
-    , color.MediumBlue, color.Green, DreamMountConfigPath)
-local DreamMountInvalidResetPidErr = "%sInvalid player id provided for variable reset %s!\n"
-local DreamMountResetNotAllowedErr = "%sYou cannot reset DreamMountVariables for %s!\n"
-local DreamMountNoPreferredMountStr = Format('%sdoes not have a preferred mount set!\n' , color.Red)
-local DreamMountNoMountAvailableStr = Format('%sYou do not have any mounts available! Seek one out in the world . . .\n', color.Maroon)
-local DreamMountNotAPetStr = "%s%s cannot be used as a pet!"
-local DreamMountResetVarsString = Format('%sReset DreamMount variables for %s'
-, color.MediumBlue, color.Green)
-local DreamMountSameMountStr = "%s%s%s was already your preferred mount!\n"
-local DreamMountPreferredMountString = 'Select your preferred mount.'
-local DreamMountUnauthorizedUserMessage =
-    Format('%sYou are not authorized to run %sdreamMount %sadmin commands!\n'
-    , color.Red, color.MediumBlue, color.Red)
-local DreamMountDefaultListString = "Cancel"
-local DreamMountUnownedMountActivateStr = color.Red .. "You cannot activate this mount as it does not belong to you!"
-local DreamMountActivateMenuChoices = "Open Pack;Dismiss;Pet;Ride;Nothing"
-local DreamMountActivateMenuHeader = "What would you like to do with your mount?"
-local DreamMountMountMustBeSummonedStr = color.Red .. "Your currently selected mount must be summoned to use its container!\n"
-local DreamMountPreferredMountMenuHeaderStr = "%s Your current one is: %s"
-local DreamMountNoContainerDataErr = "This mount does not have any container data!\n"
-
 -- CustomVariables index keys
 local DreamMountVarTable = 'dreamMountVars'
 local DreamMountEnabledKey = 'isMounted'
@@ -552,7 +524,7 @@ end
 
 local function unauthorizedUserMessage(pid)
     assertPidProvided(pid)
-    SendMessage(pid, DreamMountUnauthorizedUserMessage, false)
+    SendMessage(pid, UI.UnauthorizedUserMessage, false)
 end
 
 ---@param player JSONPlayer
@@ -957,7 +929,7 @@ local function clearCustomVarsForPlayer(player)
     DreamMountFunctions:clearCustomVariables(player)
     SendMessage(player.pid,
                 Format(Patterns.SingleVarReset
-                       , DreamMountResetVarsString
+                       , UI.ResetVarsString
                        , player.name)
                 , false)
 end
@@ -1161,7 +1133,7 @@ end
 
 function DreamMountFunctions:activateMountContainer(player)
     if not self:mountHasContainerData(player) then
-        return player:Message(DreamMountNoContainerDataErr)
+        return player:Message(UI.NoContainerDataErr)
     end
 
     self:despawnBagRef(player)
@@ -1355,7 +1327,7 @@ end
 ---@param player JSONPlayer
 ---@return string|nil UI Display output for the player's currently available mounts. nil if none are currently available
 function DreamMountFunctions:createMountMenuString(player)
-    local DreamMountListString = DreamMountDefaultListString
+    local DreamMountListString = UI.DefaultListString
     local playerInventory = player.data.inventory
 
     assert(playerInventory, Format(Err.NoInventoryErr, Traceback(3)))
@@ -1375,7 +1347,7 @@ function DreamMountFunctions:createMountMenuString(player)
         end
     end
 
-    if DreamMountListString ~= DreamMountDefaultListString then
+    if DreamMountListString ~= UI.DefaultListString then
         return DreamMountListString
     end
 end
@@ -1391,7 +1363,7 @@ function DreamMountFunctions:toggleMount(player)
     if not isMounted then
         if not mountIndex then
             return player:Message(Format(Patterns.NoPreferredMountMessage,
-                color.Yellow, player.name, DreamMountNoPreferredMountStr))
+                color.Yellow, player.name, UI.NoPreferredMountStr))
         end
 
         local mount = self.mountConfig[mountIndex]
@@ -1534,7 +1506,7 @@ function DreamMountFunctions:clearCustomVariablesCommand(pid, cmd)
             clearCustomVarsForPlayer(targetPlayer)
         else
             return callerPlayer:Message(
-                Format(DreamMountResetNotAllowedErr, color.Red, targetPlayer.name)
+                Format(UI.ResetNotAllowedErr, color.Red, targetPlayer.name)
             )
         end
     elseif canRunMountAdminCommands(callerPlayer) and cmd[3] == "all" then
@@ -1546,14 +1518,14 @@ function DreamMountFunctions:clearCustomVariablesCommand(pid, cmd)
         end
         SendMessage(pid
                     , Format(Patterns.SingleVarReset
-                             , DreamMountResetVarsString
+                             , UI.ResetVarsString
                              , Concat(playersWhoReset, ','))
                     , false)
     elseif not cmd[3] then
         clearCustomVarsForPlayer(callerPlayer)
     else
         return callerPlayer:Message(
-            Format(DreamMountInvalidResetPidErr, color.Red, cmd[3])
+            Format(UI.InvalidResetPidErr, color.Red, cmd[3])
         )
     end
 end
@@ -1596,7 +1568,7 @@ function DreamMountFunctions:setPreferredMount(_, pid, idGui, data)
 
     local prevPreferredMount = customVariables[DreamMountPreferredMountKey]
     if prevPreferredMount and prevPreferredMount == selectedMountIndex then
-        return player:Message(Format(DreamMountSameMountStr,
+        return player:Message(Format(UI.SameMountStr,
                                      color.MistyRose,
                                      selectedMountName,
                                      color.Maroon))
@@ -1617,16 +1589,16 @@ function DreamMountFunctions:showPreferredMountMenu(pid, _)
     local DreamMountListString = self:createMountMenuString(player)
 
     if not DreamMountListString then
-        return player:Message(DreamMountNoMountAvailableStr)
+        return player:Message(UI.NoMountAvailableStr)
     end
 
-    local listHeader = DreamMountPreferredMountString
+    local listHeader = UI.PreferredMountString
 
     local currentPreferredMount = getPlayerMountVars(player)[DreamMountPreferredMountKey]
     if currentPreferredMount then
         local playerMountData = self.mountConfig[currentPreferredMount]
         if playerMountData then
-            listHeader = Format(DreamMountPreferredMountMenuHeaderStr, listHeader, playerMountData.name)
+            listHeader = Format(UI.PreferredMountMenuHeaderStr, listHeader, playerMountData.name)
         end
     end
 
@@ -1637,6 +1609,7 @@ function DreamMountFunctions:slowSaveOnEmptyWorld()
     if next(Players) then return end
     SlowSave(Paths.MountConfigPath, self.mountConfig)
     SlowSave(Paths.MerchantConfigPath, self.mountMerchants)
+    SlowSave(Paths.BodyPartConfigPath, MountBodyPartsDefault)
 end
 
 function DreamMountFunctions:toggleMountCommand(pid)
@@ -1652,13 +1625,13 @@ function DreamMountFunctions.defaultMountConfig(_, pid)
     SlowSave(Paths.MerchantConfigPath, DreamMountMerchantsDefault)
     SlowSave(Paths.BodyPartConfigPath, MountBodyPartsDefault)
 
-    SendMessage(pid, DreamMountDefaultConfigSavedString, false)
+    SendMessage(pid, Format("%s%s\n", UI.DefaultConfigSavedString, Paths.MountConfigPath), false)
 end
 
 function DreamMountFunctions:reloadMountConfig(pid)
     if not DreamMountFunctions.validateUser(pid) then return end
     self:initMountData()
-    SendMessage(pid, DreamMountConfigReloadedMessage, false)
+    SendMessage(pid, UI.ConfigReloadedMessage, false)
 end
 
 function DreamMountFunctions.resetPlayerSpells()
@@ -1719,7 +1692,7 @@ function DreamMountFunctions:getPlayerMountSummon(player)
     local preferredMount = customVariables[DreamMountPreferredMountKey]
     if not preferredMount then
         return player:Message(Format(Patterns.NoPreferredMountMessage,
-                color.Yellow, playerName, DreamMountNoPreferredMountStr))
+                color.Yellow, playerName, UI.NoPreferredMountStr))
     end
 
     local mountData = self.mountConfig[preferredMount]
@@ -1762,7 +1735,7 @@ function DreamMountFunctions:summonCreatureMount(pid, _)
     local preferredMount = customVariables[DreamMountPreferredMountKey]
     if not preferredMount then
         return player:Message(Format(Patterns.NoPreferredMountMessage,
-            color.Yellow, player.name, DreamMountNoPreferredMountStr))
+            color.Yellow, player.name, UI.NoPreferredMountStr))
     end
 
     local petId = self:getPlayerMountSummon(player)
@@ -1771,7 +1744,7 @@ function DreamMountFunctions:summonCreatureMount(pid, _)
     local mountData = self.mountConfig[preferredMount]
     local mountName = mountData.name
     if not mountData.petData then
-        return player:Message(Format(DreamMountNotAPetStr, color.Red, mountName))
+        return player:Message(Format(UI.NotAPetStr, color.Red, mountName))
     end
 
     self:despawnMountSummon(player)
@@ -1879,7 +1852,7 @@ function DreamMountFunctions:openContainerForNonSummon(pid, _)
     if not self:selectedMountIsPet(player) then
         self:activateMountContainer(player)
     else
-        player:Message(DreamMountMountMustBeSummonedStr)
+        player:Message(UI.MountMustBeSummonedStr)
     end
 end
 
@@ -1907,7 +1880,7 @@ function DreamMountFunctions.handleMountActivation(_, _, _, cellDescription, obj
     if not mountRefNum or not owningPlayer then
         return
     elseif owningPlayer ~= activatingName then
-        return MessageBox(activatingPlayer.pid, -1, DreamMountUnownedMountActivateStr)
+        return MessageBox(activatingPlayer.pid, -1, UI.UnownedMountActivateStr)
     end
 
     mountLog(Format(Log.MountActivatedStr,
@@ -1917,8 +1890,8 @@ function DreamMountFunctions.handleMountActivation(_, _, _, cellDescription, obj
                  cellDescription))
 
     activatingPlayer:MessageBox(DreamMountsMountActivateGUIID,
-                                DreamMountActivateMenuHeader,
-                                DreamMountActivateMenuChoices)
+                                UI.ActivateMenuHeader,
+                                UI.ActivateMenuChoices)
 end
 
 return DreamMountFunctions
