@@ -85,6 +85,7 @@ return {
       Green),
     DefaultListString = "Cancel",
     InvalidResetPidErr = "%sInvalid player id provided for variable reset %s!\n",
+    MissingMountKey = Red .. "You don't have the key for your mount!\n",
     MountMustBeSummonedStr = Red .. "Your currently selected mount must be summoned to use its container!\n",
     NoContainerDataErr = "This mount does not have any container data!\n",
     NoMountAvailableStr = Format(

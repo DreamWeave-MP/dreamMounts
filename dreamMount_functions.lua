@@ -332,6 +332,12 @@ local function dismountIfMounted(player)
     end
 end
 
+local function hasMountKey(player, mountData)
+    local inventory = player.data.inventory
+    local keyId = getMountKeyString(mountData)
+    return ContainsItem(inventory, keyId) or player:Message(UI.MissingMountKey)
+end
+
 local function buildSpellEffectString(mountSpellRecordId, mountSpell)
     local parts = {
         mountSpellRecordId,
@@ -1156,7 +1162,11 @@ function DreamMountFunctions:toggleMount(player)
                 color.Yellow, player.name, UI.NoPreferredMountStr))
         end
 
+
         local mount = self.mountConfig[mountIndex]
+
+        if not hasMountKey(player, mount) then return end
+
         local mountId = mount.item
         local mountName = mount.name
         local mountType = mount.mountType or MountTypes.Shirt
@@ -1532,6 +1542,9 @@ function DreamMountFunctions:summonCreatureMount(pid, _)
     if not petId then return end
 
     local mountData = self.mountConfig[preferredMount]
+
+    if not hasMountKey(player, mountData) then return end
+
     local mountName = mountData.name
     if not mountData.petData then
         return player:Message(Format(UI.NotAPetStr, color.Red, mountName))
