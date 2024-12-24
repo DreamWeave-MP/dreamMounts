@@ -1036,7 +1036,7 @@ function DreamMountFunctions:createClothingRecords(firstPid)
     local tailSlot = PartReferenceSlots.Tail
 
     local clothesSaved = 0
-    for _, clothingData in ipairs(MountClothingDefault) do
+    for _, clothingData in ipairs(self.mountClothing) do
         assert(clothingData.id and clothingData.name and clothingData.partId,
                Err.InvalidClothingDataErr .. Traceback())
 
