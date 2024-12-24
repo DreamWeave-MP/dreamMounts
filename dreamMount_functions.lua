@@ -259,6 +259,8 @@ local KeyItemTemplate = {
 local DreamMountFunctions = {
     mountConfig = {},
     mountMerchants = {},
+    mountParts = {},
+    mountClothing = {},
 }
 
 local function mountLog(message)
