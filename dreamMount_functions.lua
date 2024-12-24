@@ -29,6 +29,7 @@ local GetPosY = tes3mp.GetPosY
 local ListBox = tes3mp.ListBox
 local Load = jsonInterface.load
 local MessageBox = tes3mp.MessageBox
+local ProcessCommand = commandHandler.ProcessCommand
 local ReadReceivedActorList = tes3mp.ReadReceivedActorList
 local RemoveClosestItem = inventoryHelper.removeClosestItem
 local RunConsoleCommandOnObject = logicHandler.RunConsoleCommandOnObject
@@ -63,6 +64,7 @@ local SetObjectRotation = tes3mp.SetObjectRotation
 local SetObjectScale = tes3mp.SetObjectScale
 local SetRecordType = tes3mp.SetRecordType
 local SlowSave = jsonInterface.save
+local TablePrint = tableHelper.print
 
 --TES3MP Globals
 local AddToInventory = enumerations.inventory.ADD
@@ -87,8 +89,12 @@ local SpellRecordType = enumerations.recordType.SPELL
 -- Local Constants
 ---@diagnostic disable-next-line: deprecated
 local Paths, Err, Patterns, Log, UI = unpack(require('custom.dreamMount.dreamMount_strings'))
-local DreamMountMerchantsDefault, DreamMountConfigDefault, MountBodyPartsDefault, MountClothingDefault =
-    unpack(require('custom.dreamMount.dreamMount_defaultConfig'))
+local DreamMountDefaults = require('custom.dreamMount.dreamMount_defaultConfig')
+local DreamMountMerchantsDefault = DreamMountDefaults.Merchants
+local DreamMountConfigDefault = DreamMountDefaults.Mounts
+local MountBodyPartsDefault = DreamMountDefaults.Parts
+local MountClothingDefault = DreamMountDefaults.Clothes
+
 local MWScripts = require('custom.dreamMount.dreamMount_mwscripts')
 
 local DreamMountAdminRankRequired = 2
@@ -1262,11 +1268,13 @@ end
 
 function DreamMountFunctions:logConfig()
     mountLog("---------------BEGIN DREAMMOUNT CONFIG---------------")
-    tableHelper.print(self.mountConfig)
+    TablePrint(self.mountConfig)
     mountLog("---------------MERCHANT CONFIG---------------")
-    tableHelper.print(self.mountMerchants)
+    TablePrint(self.mountMerchants)
     mountLog("---------------BODYPART CONFIG---------------")
-    tableHelper.print(self.mountParts)
+    TablePrint(self.mountParts)
+    mountLog("---------------CLOTHING CONFIG---------------")
+    TablePrint(self.mountClothing)
     mountLog("---------------END DREAMMOUNT CONFIG---------------")
 end
 
@@ -1274,6 +1282,7 @@ function DreamMountFunctions:loadMountConfig()
     local mountConfigPath = Paths.MountConfigPath
     local merchantConfigPath = Paths.MerchantConfigPath
     local bodyPartConfigPath = Paths.BodyPartConfigPath
+    local clothingConfigPath = Paths.ClothingConfigPath
 
     self.mountConfig = Load(mountConfigPath) or DreamMountConfigDefault
 
@@ -1290,6 +1299,11 @@ function DreamMountFunctions:loadMountConfig()
     self.mountParts = Load(bodyPartConfigPath) or MountBodyPartsDefault
     if self.mountParts == MountBodyPartsDefault then
         Save(bodyPartConfigPath, self.mountParts)
+    end
+
+    self.mountClothing = Load(clothingConfigPath) or MountClothingDefault
+    if self.mountClothing == MountClothingDefault then
+        Save(clothingConfigPath, self.mountClothing)
     end
 
     self:logConfig()
@@ -1418,14 +1432,40 @@ function DreamMountFunctions:toggleMountCommand(pid)
     self:toggleMount(player)
 end
 
-function DreamMountFunctions.defaultMountConfig(_, pid)
+
+function DreamMountFunctions:defaultMountConfig(pid, cmd)
     if not DreamMountFunctions.validateUser(pid) then return end
+    TablePrint(cmd)
+    ProcessCommand(pid, { 'load', 'custom.dreamMount.dreamMount_defaultConfig' })
+    ProcessCommand(pid, { 'load', 'custom.dreamMount.dreamMount_strings' })
 
-    SlowSave(Paths.MountConfigPath, DreamMountConfigDefault)
-    SlowSave(Paths.MerchantConfigPath, DreamMountMerchantsDefault)
-    SlowSave(Paths.BodyPartConfigPath, MountBodyPartsDefault)
+    local subArg = cmd[3]
+    local doReload = (cmd[4] and cmd[4] == 'true') or (cmd[3] and cmd[3] == 'true')
 
-    SendMessage(pid, Format("%s%s\n", UI.DefaultConfigSavedString, Paths.MountConfigPath), false)
+    if not subArg then
+        SlowSave(Paths.MountConfigPath, DreamMountConfigDefault)
+        SlowSave(Paths.MerchantConfigPath, DreamMountMerchantsDefault)
+        SlowSave(Paths.BodyPartConfigPath, MountBodyPartsDefault)
+        SlowSave(Paths.ClothingConfigPath, MountClothingDefault)
+        SendMessage(pid, UI.AllDefaultConfigsSaved, false)
+    elseif subArg:lower() == "mount" then
+        SlowSave(Paths.MountConfigPath, DreamMountConfigDefault)
+        SendMessage(pid, Format("%s%s\n", UI.DefaultConfigSavedString, Paths.MountConfigPath), false)
+    elseif subArg:lower() == "merchant" then
+        SlowSave(Paths.MerchantConfigPath, DreamMountMerchantsDefault)
+        SendMessage(pid, Format("%s%s\n", UI.DefaultConfigSavedString, Paths.MerchantConfigPath), false)
+    elseif subArg:lower() == "bodypart" then
+        SlowSave(Paths.BodyPartConfigPath, MountBodyPartsDefault)
+        SendMessage(pid, Format("%s%s\n", UI.DefaultConfigSavedString, Paths.BodyPartConfigPath), false)
+    elseif subArg:lower() == "clothing" then
+        SlowSave(Paths.ClothingConfigPath, MountClothingDefault)
+        SendMessage(pid, Format("%s%s\n", UI.DefaultConfigSavedString, Paths.ClothingConfigPath), false)
+    end
+
+    if doReload then
+        SendMessage(pid, UI.DefaultConfigsReloading, false)
+        self:loadMountConfig()
+    end
 end
 
 function DreamMountFunctions:reloadMountConfig(pid)

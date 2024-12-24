@@ -13,6 +13,7 @@ return {
     AnimRigPath = 'rot/anim/%s.nif',
     BodyPartConfigPath = 'custom/dreamMountBodyParts.json',
     MerchantConfigPath = 'custom/dreamMountMerchants.json',
+    ClothingConfigPath = 'custom/dreamMountClothing.json',
     MountConfigPath = 'custom/dreamMountConfig.json',
   },
   {
@@ -72,6 +73,12 @@ return {
     -- UI Messages
     ActivateMenuChoices = "Open Pack;Dismiss;Pet;Ride;Nothing",
     ActivateMenuHeader = "What would you like to do with your mount?",
+    AllDefaultConfigsSaved = Format(
+      "%sReset all %sDreamMount%s Configuration Files to their defaults!\n",
+      Green,
+      MediumBlue,
+      Green
+    ),
     ConfigReloadedMessage = Format(
       '%sMount config reloaded, %smenu reconstructed, %sand spell records remade! %sDreamMount%s has completely reinitialized.\n',
       MediumBlue,
@@ -79,6 +86,12 @@ return {
       MediumBlue,
       Navy,
       Green),
+    DefaultConfigsReloading = Format(
+      "%sReloading all %sDreamMount%s Configuration Files!\n",
+      Green,
+      MediumBlue,
+      Green
+    ),
     DefaultConfigSavedString = Format(
       '%sSaved default mount config to %sdata/',
       MediumBlue,
