@@ -40,7 +40,7 @@ local MountDefaultFatigueRestore = 3
 
 return {
   ---@type { [MerchantName]: MountMerchantConfig}
-  {
+  Merchants = {
     [MerchantID.ald_ruhn] = {
       capacity = 1,
       selection = { 4 }
@@ -91,7 +91,7 @@ return {
     },
   },
   ---@type MountData[]
-  {
+  Mounts = {
     -- 1
     {
       name = 'Guar',
@@ -203,7 +203,7 @@ return {
     },
   },
   ---@type BodyPart[]
-  {
+  Parts = {
     {
       id = "dm_mechagizka",
       model = "s3/mount/gizka/mechagizka.nif",
@@ -230,11 +230,16 @@ return {
     },
   },
   ---@type ClothingRecord[]
-  {
+  Clothes = {
     {
       name = "Red Gizka",
       id = "dm_redgizka_shirt",
       partId = "dm_redgizka",
+    },
+    {
+      name = "Orange Gizka",
+      id = "dm_ojgizka_shirt",
+      partId = "dm_orangegizka",
     },
   },
 }
