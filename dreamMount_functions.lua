@@ -1437,7 +1437,6 @@ end
 
 function DreamMountFunctions:defaultMountConfig(pid, cmd)
     if not DreamMountFunctions.validateUser(pid) then return end
-    TablePrint(cmd)
     ProcessCommand(pid, { 'load', 'custom.dreamMount.dreamMount_defaultConfig' })
     ProcessCommand(pid, { 'load', 'custom.dreamMount.dreamMount_strings' })
 
