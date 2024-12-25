@@ -14,6 +14,7 @@ return {
     BodyPartConfigPath = 'custom/dreamMountBodyParts.json',
     MerchantConfigPath = 'custom/dreamMountMerchants.json',
     ClothingConfigPath = 'custom/dreamMountClothing.json',
+    RefConfigPath = 'custom/dreamMountCellRefs.json',
     MountConfigPath = 'custom/dreamMountConfig.json',
   },
 

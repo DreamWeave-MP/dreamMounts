@@ -147,10 +147,6 @@ local DreamMountSummonInventoryDataKey = 'dreamMountSummonInventories'
 ---@type table <string, boolean>
 local KeyRecords = {}
 
---- Stores a map of mount refNums to their owners for the purpose of UI messages
----@type table <string, string>
-local MountRefs = {}
-
 ---@alias MountIndex integer
 
 local KeyItemTemplate = {
@@ -160,11 +156,15 @@ local KeyItemTemplate = {
     weight = 0.0,
 }
 
+---@class DreamMountFunctions
+---@field mountRefs table <string, string> Stores a map of mount refNums to their owners for the purpose of UI messages
+
 local DreamMountFunctions = {
     mountConfig = {},
     mountMerchants = {},
     mountParts = {},
     mountClothing = {},
+    mountRefs = {},
 }
 
 local function mountLog(message)
@@ -491,7 +491,7 @@ function DreamMountFunctions:despawnMountSummon(player)
     end
     player:QuicksaveToDrive()
 
-    if MountRefs[summonRef] then MountRefs[summonRef] = nil end
+    if self.mountRefs[summonRef] then self.mountRefs[summonRef] = nil end
 end
 
 ---@class ObjectDataTable
@@ -566,7 +566,7 @@ end
 --- Enabling the follow routine when doing so
 ---@param player JSONPlayer
 ---@param summonId string generated recordId for the mount summon
-local function spawnMountSummon(player, summonId)
+function DreamMountFunctions:spawnMountSummon(player, summonId)
     assert(player and player:IsLoggedIn(), DreamMountStrings.Err.UnloggedPlayerSummonErr)
     local pid = player.pid
     local playerCell = player.data.location.cell
@@ -577,7 +577,7 @@ local function spawnMountSummon(player, summonId)
 
     customVariables[DreamMountSummonRefNumKey] = summonIndex
     customVariables[DreamMountSummonCellKey] = playerCell
-    MountRefs[summonIndex] = player.name
+    self.mountRefs[summonIndex] = player.name
 
     player:QuicksaveToDrive()
 end
@@ -1231,6 +1231,7 @@ function DreamMountFunctions:loadMountConfig()
     local merchantConfigPath = Paths.MerchantConfigPath
     local bodyPartConfigPath = Paths.BodyPartConfigPath
     local clothingConfigPath = Paths.ClothingConfigPath
+    local refConfigPath = Paths.RefConfigPath
 
     local defaultClothing = DreamMountDefaults.Clothes
     local defaultMerchants = DreamMountDefaults.Merchants
@@ -1256,6 +1257,11 @@ function DreamMountFunctions:loadMountConfig()
     self.mountClothing = Load(clothingConfigPath) or defaultClothing
     if self.mountClothing == defaultClothing then
         Save(clothingConfigPath, self.mountClothing)
+    end
+
+    self.mountRefs = Load(refConfigPath) or {}
+    if self.mountRefs == {} then
+        Save(refConfigPath, self.mountRefs)
     end
 
     self:logConfig()
@@ -1381,6 +1387,7 @@ function DreamMountFunctions:slowSaveOnEmptyWorld()
     SlowSave(Paths.MerchantConfigPath, self.mountMerchants)
     SlowSave(Paths.BodyPartConfigPath, self.mountParts)
     SlowSave(Paths.ClothingConfigPath, self.mountClothing)
+    SlowSave(Paths.RefConfigPath, self.mountRefs)
 end
 
 function DreamMountFunctions:toggleMountCommand(pid)
@@ -1581,7 +1588,7 @@ function DreamMountFunctions:summonCreatureMount(pid, _)
         playerPetData = petData,
     }
 
-    spawnMountSummon(player, petId)
+    self:spawnMountSummon(player, petId)
 
     sendCreatureAttributePacket {
         player = player,
@@ -1649,10 +1656,10 @@ function DreamMountFunctions:onMountDied(_, pid, _)
             self:despawnMountSummon(player)
         -- Somebody's mount died, but it wasn't ours.
         -- Despawn the mount and remove it from local tracking.
-        elseif MountRefs[summonUniqueIndex] then
+        elseif self.mountRefs[summonUniqueIndex] then
             local summonCell = GetActorCell(actorIndex)
             DeleteObjectForEveryone(summonCell, summonUniqueIndex)
-            MountRefs[summonUniqueIndex] = nil
+            self.mountRefs[summonUniqueIndex] = nil
         end
     end
 end
@@ -1681,15 +1688,14 @@ function DreamMountFunctions.dismountOnHit(_, _, _, _, _, targetPlayers)
     end
 end
 
-function DreamMountFunctions.handleMountActivation(_, _, _, cellDescription, objects, _)
+function DreamMountFunctions:handleMountActivation(_, _, cellDescription, objects, _)
     local firstIndex, firstObject = next(objects)
     local activatingPlayer = Players[firstObject.activatingPid]
     local activatingName = activatingPlayer.name
-    local mountRefNum = getPlayerMountVars(activatingPlayer)[DreamMountSummonRefNumKey]
-    local owningPlayer = MountRefs[firstIndex]
+    local owningPlayer = self.mountRefs[firstIndex]
     local UI = DreamMountStrings.UI
 
-    if not mountRefNum or not owningPlayer then
+    if not owningPlayer then
         return
     elseif owningPlayer ~= activatingName then
         return MessageBox(activatingPlayer.pid, -1, UI.UnownedMountActivateStr)
