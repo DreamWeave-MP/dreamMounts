@@ -63,6 +63,7 @@ local SetObjectRefId = tes3mp.SetObjectRefId
 local SetObjectRefNum = tes3mp.SetObjectRefNum
 local SetObjectRotation = tes3mp.SetObjectRotation
 local SetObjectScale = tes3mp.SetObjectScale
+local SetPlayerAsObject = tes3mp.SetPlayerAsObject
 local SetRecordType = tes3mp.SetRecordType
 local SlowSave = jsonInterface.save
 local TablePrint = tableHelper.print
@@ -228,6 +229,23 @@ end
 local function unauthorizedUserMessage(pid)
     assertPidProvided(pid)
     SendMessage(pid, DreamMountStrings.UI.UnauthorizedUserMessage, false)
+end
+
+---@param player JSONPlayer
+--- Uses the TM command to forcefully close any open menus once
+--- Then invoke it a second time to restore the HUD
+local function CloseMenu(player)
+    local pid = player.pid
+    for _ = 1, 2 do
+        ClearObjectList()
+        SetObjectListPid(pid)
+        SetObjectListCell(player.data.location.cell)
+        SetObjectListConsoleCommand("TM")
+        SetPlayerAsObject(pid)
+        AddObject()
+        table.insert(player.consoleCommandsQueued, "TM")
+        SendConsoleCommand(false)
+    end
 end
 
 ---@param player JSONPlayer
@@ -1717,6 +1735,50 @@ function DreamMountFunctions:handleMountActivation(_, _, cellDescription, object
                                 UI.ActivateMenuChoices)
 
     return EventStatus(false, false)
+end
+
+function DreamMountFunctions:denyMountClothingRemoval(_, pid, _)
+    local player = Players[pid]
+    if not getPlayerMountVars(player)[DreamMountEnabledKey] then return end
+
+    if tes3mp.GetInventoryChangesAction(pid) ~= RemoveFromInventory then return end
+
+    local itemChangesCount = tes3mp.GetInventoryChangesSize(pid)
+
+    local mountData = self:getMountData(player)
+    local mountItemId = mountData.item:lower()
+
+    for index = 0, itemChangesCount - 1 do
+        local ObjectRefId = tes3mp.GetInventoryItemRefId(pid, index)
+
+        if ObjectRefId and ObjectRefId == mountItemId then
+            CloseMenu(pid)
+            return customEventHooks.makeEventStatus(false, false)
+        end
+    end
+end
+
+function DreamMountFunctions:replaceMountClothingOnRemoval(_, pid, playerPacket)
+    local player = Players[pid]
+    if not getPlayerMountVars(player)[DreamMountEnabledKey] then return end
+
+    local equipmentSlot, equipmentData = next(playerPacket.equipment)
+
+    local mountData = self:getMountData(player)
+    local mountItem = mountData.item:lower()
+
+    local mountType = mountData.mountType or MountTypes.Shirt
+    local mountSlot = MountSlotMap[mountType]
+    local mappedEquipSlot = EquipEnums[mountSlot]
+
+    local removedMountItem = equipmentData.refId ~= mountItem or equipmentData.count == 0
+    if equipmentSlot == mappedEquipSlot and removedMountItem then
+        CloseMenu(player)
+        player:updateEquipment {
+            [mountSlot] = mountData.item
+        }
+        return EventStatus(false, false)
+    end
 end
 
 return DreamMountFunctions

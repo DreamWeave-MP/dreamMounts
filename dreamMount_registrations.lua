@@ -190,6 +190,8 @@ for eventType, eventTable in pairs {
 
   EventValidators = {
     OnObjectActivate = 'handleMountActivation',
+    OnPlayerInventory = 'denyMountClothingRemoval',
+    OnPlayerEquipment = 'replaceMountClothingOnRemoval',
   }
 } do
   local registrarType = (eventType == 'EventHandlers') and RegisterHandler or RegisterValidator
