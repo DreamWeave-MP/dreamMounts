@@ -845,7 +845,7 @@ function DreamMountFunctions:handleMountActivateMenu(pid, activateMenuChoice)
         self:despawnMountSummon(player)
         self:despawnBagRef(player)
     elseif activateMenuChoice == 2 then
-        local petCellRef = player.data.customVariables[DreamMountSummonRefNumKey]
+        local petCellRef = getPlayerMountVars(player)[DreamMountSummonRefNumKey]
         local playerCell = player.data.location.cell
         assert(petCellRef, Err.ImpossibleActivationErr)
 
