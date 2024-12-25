@@ -1421,6 +1421,7 @@ function DreamMountFunctions:defaultMountConfig(pid, cmd)
     ProcessCommand(pid, { 'load', 'custom.dreamMount.dreamMount_defaultConfig' })
 
     local subArg = cmd[3]
+    if subArg then subArg = subArg:lower() end
     local doReload = (cmd[4] and cmd[4] == 'true') or (cmd[3] and cmd[3] == 'true')
 
     if not subArg or (subArg and subArg == 'true') then
@@ -1429,16 +1430,16 @@ function DreamMountFunctions:defaultMountConfig(pid, cmd)
         SlowSave(Paths.BodyPartConfigPath, DreamMountDefaults.Parts)
         SlowSave(Paths.ClothingConfigPath, DreamMountDefaults.Clothes)
         SendMessage(pid, UI.AllDefaultConfigsSaved, false)
-    elseif subArg:lower() == "mount" then
+    elseif subArg == "mount" then
         SlowSave(Paths.MountConfigPath, DreamMountDefaults.Mounts)
         SendMessage(pid, Format("%s%s\n", UI.DefaultConfigSavedString, Paths.MountConfigPath), false)
-    elseif subArg:lower() == "merchant" then
+    elseif subArg == "merchant" then
         SlowSave(Paths.MerchantConfigPath, DreamMountMerchantsDefault)
         SendMessage(pid, Format("%s%s\n", UI.DefaultConfigSavedString, Paths.MerchantConfigPath), false)
-    elseif subArg:lower() == "bodypart" then
+    elseif subArg == "bodypart" then
         SlowSave(Paths.BodyPartConfigPath, MountBodyPartsDefault)
         SendMessage(pid, Format("%s%s\n", UI.DefaultConfigSavedString, Paths.BodyPartConfigPath), false)
-    elseif subArg:lower() == "clothing" then
+    elseif subArg == "clothing" then
         SlowSave(Paths.ClothingConfigPath, MountClothingDefault)
         SendMessage(pid, Format("%s%s\n", UI.DefaultConfigSavedString, Paths.ClothingConfigPath), false)
     end
