@@ -414,47 +414,27 @@ local function getPetAuraStrings(mountData)
     return Format("%s_aura", mountData.name):lower(), Format("%s Aura", mountData.name)
 end
 
-local function getPetAuraEffects(mountData)
-    if not mountData.petData or not mountData.petData.aura then return end
-    local petAuraData = mountData.petData.aura
-
-    local petEffects = {}
-
-    if petAuraData.speedBonus then
-        petEffects[#petEffects + 1] =
-            Effects.FortifyAttribute(AttributeNames.SPEED, petAuraData.speedBonus)
-    end
-
-    if petAuraData.fatigueRestore then
-        petEffects[#petEffects + 1] = Effects.RestoreFatigue(petAuraData.fatigueRestore)
-    end
-
-    if petAuraData.fatigueFortify then
-        petEffects[#petEffects + 1] = Effects.FortifyFatigue(petAuraData.fatigueFortify)
-    end
-
-    if #petEffects > 0 then return petEffects end
-end
-
-local function getMountActiveEffects(mountData)
+local function getMountActiveEffects(inputMountEffects)
     local mountEffects = {}
 
-    if mountData.speedBonus then
-        mountEffects[#mountEffects + 1] = Effects.FortifyAttribute(AttributeNames.SPEED, mountData.speedBonus)
-    end
-
-    if mountData.fatigueRestore then
-        mountEffects[#mountEffects + 1] = Effects.RestoreFatigue(mountData.fatigueRestore)
-    end
-
-    if mountData.fatigueFortify then
-        mountEffects[#mountEffects + 1] = Effects.FortifyFatigue(mountData.fatigueFortify)
+    for effectName, effectMagnitude in pairs(inputMountEffects or {}) do
+        local effectData
+        local attributeName = AttributeNames[Uppercase(effectName)]
+        local effectGenerator = Effects[effectName]
+        if attributeName then
+            effectData = Effects.FortifyAttribute(attributeName, effectMagnitude)
+        elseif effectGenerator then
+            effectData = effectGenerator(effectMagnitude)
+        else
+            error(Format("%s is not a supported effect name for mount active effects!", effectName))
+        end
+        mountEffects[#mountEffects + 1] = effectData
     end
 
     if #mountEffects > 0 then return mountEffects end
 end
 
-function DreamMountFunctions:addMountSpellEffect(effects, spellId, spellName, permanentSpells)
+function DreamMountFunctions.addMountSpellEffect(effects, spellId, spellName, permanentSpells)
     local mountSpell = {
         name = spellName,
         effects = effects,
@@ -1493,26 +1473,29 @@ function DreamMountFunctions:createMountSpells(firstPlayer)
 
     local spellsSaved = 0
     for index, mountData in ipairs(self.mountConfig) do
-        local mountEffects = getMountActiveEffects(mountData)
+        local mountEffects = getMountActiveEffects(mountData.mountedEffects)
 
         if mountEffects then
             local spellName = self:getMountSpellNameString(index)
             local spellId = self:getMountSpellIdString(index)
-            self:addMountSpellEffect(mountEffects, spellId, spellName, permanentSpells)
+            self.addMountSpellEffect(mountEffects, spellId, spellName, permanentSpells)
             spellsSaved = spellsSaved + 1
         else
             local removeSpellId = self:getMountSpellIdString(index)
             permanentSpells[removeSpellId] = nil
         end
 
-        local petEffects = getPetAuraEffects(mountData)
-        if petEffects then
-            local auraId = getPetAuraStrings(mountData)
-            self:addMountSpellEffect(petEffects, auraId, "Guara", permanentSpells)
-            spellsSaved = spellsSaved + 1
-        else
-            local removeSpellId = getPetAuraStrings(mountData)
-            permanentSpells[removeSpellId] = nil
+        local petData = mountData.petData
+        if petData then
+            local petEffects = getMountActiveEffects(petData.aura)
+            if petEffects then
+                local auraId = getPetAuraStrings(mountData)
+                self.addMountSpellEffect(petEffects, auraId, "Guara", permanentSpells)
+                spellsSaved = spellsSaved + 1
+            else
+                local removeSpellId = getPetAuraStrings(mountData)
+                permanentSpells[removeSpellId] = nil
+            end
         end
     end
 

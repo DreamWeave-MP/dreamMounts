@@ -2,10 +2,58 @@
 ---@field capacity integer Number of mounts sold by this merchant
 ---@field selection MountIndex[] Set of mounts which this merchant sells. Uses numeric indices of the mountConfig table. It's up to you not to screw this up.
 
+---@alias SupportedEffect
+---| '"fatigueRestore"'
+---| '"speedBonus"'
+---| '"endurance"'
+---| '"strength"'
+---| '"intelligence"'
+---| '"willpower"'
+---| '"luck"'
+---| '"agility"'
+---| '"personality"'
+---| '"speed"'
+
+---@alias EffectMagnitude integer
+---@alias EffectTable table<SupportedEffect, EffectMagnitude>
+
+---@class MountContainerData
+---@field carryCapacityBase integer Base carrying capacity of the container, before player strength scaling
+---@field carryCapacityPerStrength integer Carrying capacity of the container per unit of player strength
+
+---@class PetData
+---@field baseId string recordId of the creature this one inherits from. Mandatory because some fields may not be set by scripts
+---@field levelPct number percentage of the player's level (rounded) to use for the pet's level
+---@field healthPct number percentage of the player's health (rounded) to use for the pet's health
+---@field fatiguePct number percentage of the player's fatigue (rounded) to use for the pet's fatigue
+---@field magickaPct number percentage of the player's magicka (rounded) to use for the pet's magicka
+---@field damageChop integer base chop damage before player level scaling
+---@field damageThrust integer base chop damage before player level scaling
+---@field damageSlash integer base chop damage before player level scaling
+---@field damagePerLevelPct number percentage of the base damage by which to scale the creature's, based on player level. Probably way too powerful
+---@field chopMinDmgPct number percentage of the final damage calculation, to be used as minimum damage for the chop attack
+---@field slashMinDmgPct number percentage of the final damage calculation, to be used as minimum damage for the slash attack
+---@field thrustMinDmgPct number percentage of the final damage calculation, to be used as minimum damage for the thrust attack
+---@field spells? string[] list of spells to teach the pet when it is summoned
+---@field aura? EffectTable list of spell effects to grant to the player when the pet is summoned
+---@field attributes table<string, number> percentage of each of the player's attributes to grant to the pet. Mandatory because not all fields may be set (properly) by the server.
+
+--- All values are optional because they're filled in by `KeyItemTemplate` in dreamMount_functions
+---@class MountKey
+---@field value? integer
+---@field weight? number
+---@field icon? string
+---@field model? string
+
 ---@class MountData
 ---@field name string Human-readable name of the mount. Used in a bunch of places
 ---@field item string recordId of the clothing item used by this mount
 ---@field model? string basename of the animation rig used by this mount. Only used for shirt type mounts
+---@field mountedEffects? EffectTable Determines magical bonuses granted by this mount when summoned, but not mounted
+---@field containerData? MountContainerData Determines weight capacity of the mount's container, if it has one
+---@field petData? PetData Determines magical and visual statistics about the mount itself
+---@field key? MountKey
+---@field mountType? MountType Optional as it defaults to Shirt (1)
 
 ---@class BodyPart Bodypart record data used by generated clothing records for mounts
 ---@field id string record id of the bodypart to use
@@ -97,8 +145,11 @@ return {
       name = 'Guar',
       item = 'rot_c_guar00_shirtC3',
       model = 'mountedguar2',
-      speedBonus = 70,
-      fatigueRestore = MountDefaultFatigueRestore,
+      mountedEffects = {
+        endurance = 45,
+        strength = 10,
+        RestoreFatigue = MountDefaultFatigueRestore,
+      },
       petData = {
         baseId = "guar",
         levelPct = 0.50,
@@ -122,8 +173,8 @@ return {
           Speed = 1.25,
         },
         aura = {
-          fatigueRestore = 1,
-          fatigueFortify = 50,
+          RestoreFatigue = 1,
+          FortifyFatigue = 50,
         },
         spells = {},
       },
@@ -138,8 +189,10 @@ return {
       name = "Pack Guar 1",
       item = 'rot_c_guar1B_shirtC3',
       model = 'mountedguar1',
-      speedBonus = 60,
-      fatigueRestore = MountDefaultFatigueRestore * 1.5,
+      mountedEffects = {
+        speed = 60,
+        RestoreFatigue = MountDefaultFatigueRestore * 1.5,
+      },
     },
     -- 3
     {
@@ -147,8 +200,10 @@ return {
       name = "Pack Guar 2",
       item = 'rot_c_guar1A_shirt0',
       model = 'mountedguar1',
-      speedBonus = 60,
-      fatigueRestore = MountDefaultFatigueRestore * 1.5,
+      mountedEffects = {
+        speed = 60,
+        RestoreFatigue = MountDefaultFatigueRestore * 1.5,
+      },
     },
     -- 4
     {
@@ -156,8 +211,10 @@ return {
       name = "Redoran War Guar",
       item = 'rot_c_guar2A_shirt0_redoranwar',
       model = 'mountedguar2',
-      speedBonus = 80,
-      fatigueRestore = MountDefaultFatigueRestore / 2,
+      mountedEffects = {
+        speed = 80,
+        RestoreFatigue = MountDefaultFatigueRestore / 2,
+      },
       key = {
         icon = "c/tx_belt_expensive03.dds",
         model = "c/c_belt_expensive_3.nif",
@@ -169,8 +226,10 @@ return {
       name = "Guar with Drapery (Fine)",
       item = 'rot_c_guar2B_shirt0_ordinator',
       model = 'mountedguar2',
-      speedBonus = 80,
-      fatigueRestore = MountDefaultFatigueRestore * 2,
+      mountedEffects = {
+        speed = 80,
+        RestoreFatigue = MountDefaultFatigueRestore * 2,
+      },
       key = {
         icon = "c/tx_belt_exquisite01.dds",
         model = "c/c_belt_exquisite_1.nif",
@@ -182,8 +241,10 @@ return {
       name = "Guar with Drapery (Simple)",
       item = 'rot_c_guar2C_shirt0_scout',
       model = 'mountedguar2',
-      speedBonus = 100,
-      fatigueRestore = MountDefaultFatigueRestore * 1.25,
+      mountedEffects = {
+        speed = 100,
+        RestoreFatigue = MountDefaultFatigueRestore * 1.25,
+      },
       key = {
         icon = "c/tx_belt_exquisite01.dds",
         model = "c/c_belt_exquisite_1.nif",
@@ -195,7 +256,9 @@ return {
       name = "Red Speeder",
       item = 'sw_speeder1test',
       mountType = 0,
-      speedBonus = 200,
+      mountedEffects = {
+        speed = 200,
+      },
       key = {
         name = "Red Speeder Key",
         value = 5000,
@@ -240,6 +303,26 @@ return {
       name = "Orange Gizka",
       id = "dm_ojgizka_shirt",
       partId = "dm_orangegizka",
+    },
+    {
+      name = "Mecha Gizka",
+      id = "dm_mechagizka_shirt",
+      partId = "dm_mechagizka",
+    },
+    {
+      name = "Orange and Green Gizka",
+      id = "dm_orangeandgreengizka_shirt",
+      partId = "dm_orangeandgreengizka",
+    },
+    {
+      name = "Orange and Black Gizka",
+      id = "dm_orangeandblackgizka_shirt",
+      partId = "dm_orangeandblackgizka",
+    },
+    {
+      name = "Orange and Black Gizka (2)",
+      id = "dm_orangeandblackgizka2_shirt",
+      partId = "dm_orangeandblackgizka2",
     },
   },
 }
