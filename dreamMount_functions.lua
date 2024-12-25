@@ -19,6 +19,7 @@ local ClearRecords = tes3mp.ClearRecords
 local ContainsItem = inventoryHelper.containsItem
 local CreateObjectAtPlayer = logicHandler.CreateObjectAtPlayer
 local DeleteObjectForEveryone = logicHandler.DeleteObjectForEveryone
+local EventStatus = customEventHooks.makeEventStatus
 local GetActorCell = tes3mp.GetActorCell
 local GetActorListSize = tes3mp.GetActorListSize
 local GetActorMpNum = tes3mp.GetActorMpNum
@@ -1714,6 +1715,8 @@ function DreamMountFunctions:handleMountActivation(_, _, cellDescription, object
     activatingPlayer:MessageBox(DreamMountsMountActivateGUIID,
                                 UI.ActivateMenuHeader,
                                 UI.ActivateMenuChoices)
+
+    return EventStatus(false, false)
 end
 
 return DreamMountFunctions

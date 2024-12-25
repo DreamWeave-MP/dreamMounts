@@ -10,6 +10,7 @@ local EquipItem = tes3mp.EquipItem
 local ProcessCommand = commandHandler.ProcessCommand
 local RegisterCommand = customCommandHooks.registerCommand
 local RegisterHandler = customEventHooks.registerHandler
+local RegisterValidator = customEventHooks.registerValidator
 local SendEquipment = tes3mp.SendEquipment
 local SendMessage = tes3mp.SendMessage
 local SendSpellbookChanges = tes3mp.SendSpellbookChanges
@@ -175,24 +176,32 @@ local function handleMountCommand(pid, cmd)
 
 end
 
-for eventName, callbackName in pairs {
-  OnServerPostInit = 'initMountData',
-  OnGUIAction = 'setPreferredMount',
-  OnPlayerDisconnect = 'slowSaveOnEmptyWorld',
-  OnObjectDialogueChoice = 'reloadMountMerchants',
-  OnActorCellChange = 'trackPlayerMountCell',
-  OnActorDeath = 'onMountDied',
-  OnPlayerFinishLogin = 'cleanUpMountOnLogin',
-  OnObjectHit = 'dismountOnHit',
-  OnObjectActivate = 'handleMountActivation',
-} do localRegisterThing
-  {
-    registrar = RegisterHandler,
-    event = eventName,
-    callbackModule = DreamMountFunctions,
-    callbackName = callbackName,
-    canUseSelf = true
+for eventType, eventTable in pairs {
+  EventHandlers = {
+    OnServerPostInit = 'initMountData',
+    OnGUIAction = 'setPreferredMount',
+    OnPlayerDisconnect = 'slowSaveOnEmptyWorld',
+    OnObjectDialogueChoice = 'reloadMountMerchants',
+    OnActorCellChange = 'trackPlayerMountCell',
+    OnActorDeath = 'onMountDied',
+    OnPlayerFinishLogin = 'cleanUpMountOnLogin',
+    OnObjectHit = 'dismountOnHit',
+  },
+
+  EventValidators = {
+    OnObjectActivate = 'handleMountActivation',
   }
+} do
+  local registrarType = (eventType == 'EventHandlers') and RegisterHandler or RegisterValidator
+  for eventName, callbackName in pairs(eventTable) do
+    localRegisterThing {
+      registrar = registrarType,
+      event = eventName,
+      callbackModule = DreamMountFunctions,
+      callbackName = callbackName,
+      canUseSelf = true
+    }
+  end
 end
 
 RegisterCommand('ride', handleMountCommand)
