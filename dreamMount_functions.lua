@@ -77,7 +77,6 @@ local ContainerSet = enumerations.container.SET
 local CreatureRecordType = enumerations.recordType.CREATURE
 local EquipEnums = enumerations.equipment
 local FortifyAttribute = enumerations.effects.FORTIFY_ATTRIBUTE
-local FortifyFatigue = enumerations.effects.FORTIFY_FATIGUE
 local LoadedCells = LoadedCells
 local RecordStores = RecordStores
 local RemoveFromInventory = enumerations.inventory.REMOVE
@@ -102,7 +101,6 @@ local DreamMountsMountActivateGUIID = 381343
 local MountTypes = {
     Gauntlet = 0,
     Shirt = 1,
-    Length = 2,
 }
 
 ---@enum EquipEnum
@@ -148,24 +146,6 @@ local BodyPart = {
     },
 }
 
---- The specific type of clothing or armor which a record uses.
---- This is basically *only* the item slot which is occupied.
---- It has no bearing at all on what visuals are displayed,
---- only decided what items this one conflicts with.
-local ClothingTypes = {
-    Pants = 0,
-    Shoes = 1,
-    Shirt = 2,
-    Belt = 3,
-    Robe = 4,
-    RGlove = 5,
-    LGlove = 6,
-    Skirt = 7,
-    Ring = 8,
-    Amulet = 9,
-    LENGTH = 10,
-}
-
 -- We don't currently use armor types, but we might later and
 -- I don't feel like drawing the enums out again
 ---@diagnostic disable-next-line: unused-local
@@ -182,42 +162,6 @@ local ArmorTypes = {
     LBracer = 9,
     RBracer = 10,
     LENGTH = 11,
-}
-
--- This table represents all of the bodypart slots,
--- which a single body part may occupy,
--- inside of a clothing or armor record.
--- It has NO other relation to bodypart records whatsoever.
--- Check BodyParts for those.
-local PartReferenceSlots = {
-    Head = 0,
-    Hair = 1,
-    Neck = 2,
-    Cuirass = 3,
-    Groin = 4,
-    Skirt = 5,
-    RHand = 6,
-    LHand = 7,
-    RWrist = 8,
-    LWrist = 9,
-    Shield = 10,
-    RForearm = 11,
-    LForearm = 12,
-    RUpperarm = 13,
-    LUpperarm = 14,
-    RFoot = 15,
-    LFoot = 16,
-    RAnkle = 17,
-    LAnkle = 18,
-    RKnee = 19,
-    LKnee = 20,
-    RLeg = 21,
-    LLeg = 22,
-    RPauldron = 23,
-    LPauldron = 24,
-    Weapon = 25,
-    Tail = 26,
-    Count = 27,
 }
 
 
@@ -1008,25 +952,33 @@ function DreamMountFunctions:createClothingRecords(firstPid)
         SetRecordType(ClothingRecord)
     end
 
-    local shirtType = ClothingTypes.Shirt
-    local tailSlot = PartReferenceSlots.Tail
-
     local clothesSaved = 0
     for _, clothingData in ipairs(self.mountClothing) do
-        assert(clothingData.id and clothingData.name and clothingData.partId,
-               DreamMountStrings.Err.InvalidClothingDataErr .. Traceback())
-
-        -- We assume parts has only one part in it.
-        -- Not ideal, but neither is assigning everything to the tail slot.
         local newClothingId = clothingData.id
+        local newClothingName = clothingData.name
+        local newClothingParts = clothingData.parts
+        local newClothingType = clothingData.clothingType
+
+        local hasValidClothingData = newClothingType
+            and newClothingId
+            and newClothingName
+            and newClothingParts
+
+        assert(hasValidClothingData, DreamMountStrings.Err.InvalidClothingDataErr .. Traceback())
+
         local newClothing = {
-            name = clothingData.name,
-            parts = {{
-                    malePart = clothingData.partId,
-                    partType = tailSlot,
-            }},
-            subtype = shirtType,
+            name = newClothingName,
+            subtype = newClothingType,
         }
+
+        local parts = {}
+        for partType, partId in pairs(newClothingParts) do
+            parts[#parts + 1] = {
+                malePart = partId,
+                partType = partType
+            }
+        end
+        newClothing.parts = parts
 
         permanentClothing[newClothingId] = newClothing
         clothesSaved = clothesSaved + 1

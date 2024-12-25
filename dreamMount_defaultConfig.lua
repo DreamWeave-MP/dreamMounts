@@ -61,12 +61,69 @@
 ---Part field is hardcoded to 14 (tail) and refers to the actual bodypart slot used
 ---Subtype refers to skin/armor/clothing and is 1 (clothing)
 
+---@alias PartReferenceTable table<PartReferenceSlot, string>
+
 ---@class ClothingRecord
 ---@field name string Visible string of the clothing record
 ---@field id string record id of the mount clothing. *must* be unique.
----@field partId string Bodypart record which is used by this item
+---@field clothingType ClothingType sorta the slot occupied by the clothing, but can be multiple (or even all)
+---@field parts PartReferenceTable numerically indexed (but not ordered!) table of slots/bodyparts to use
 ---NOTE: This method only supports creating shirts, and at that, creating shirts which have one bodypart slot
 ---We may want to expand or change this later, but it's currently unknown how much leeway we have to do that
+
+-- This table represents all of the bodypart slots,
+-- which a single body part may occupy,
+-- inside of a clothing or armor record.
+-- It has NO other relation to bodypart records whatsoever.
+-- Check BodyParts for those.
+---@enum PartReferenceSlot
+local PartReferenceSlots = {
+    Head = 0,
+    Hair = 1,
+    Neck = 2,
+    Cuirass = 3,
+    Groin = 4,
+    Skirt = 5,
+    RHand = 6,
+    LHand = 7,
+    RWrist = 8,
+    LWrist = 9,
+    Shield = 10,
+    RForearm = 11,
+    LForearm = 12,
+    RUpperarm = 13,
+    LUpperarm = 14,
+    RFoot = 15,
+    LFoot = 16,
+    RAnkle = 17,
+    LAnkle = 18,
+    RKnee = 19,
+    LKnee = 20,
+    RLeg = 21,
+    LLeg = 22,
+    RPauldron = 23,
+    LPauldron = 24,
+    Weapon = 25,
+    Tail = 26,
+}
+
+--- The specific type of clothing or armor which a record uses.
+--- This is basically *only* the item slot which is occupied.
+--- It has no bearing at all on what visuals are displayed,
+--- only decided what items this one conflicts with.
+---@enum ClothingType
+local ClothingTypes = {
+    Pants = 0,
+    Shoes = 1,
+    Shirt = 2,
+    Belt = 3,
+    Robe = 4,
+    RGlove = 5,
+    LGlove = 6,
+    Skirt = 7,
+    Ring = 8,
+    Amulet = 9,
+}
 
 ---@enum MerchantName
 local MerchantID = {
@@ -296,32 +353,50 @@ return {
     {
       name = "Red Gizka",
       id = "dm_redgizka_shirt",
-      partId = "dm_redgizka",
+      clothingType = ClothingTypes.Shirt,
+      parts = {
+        [PartReferenceSlots.Tail] = "dm_redgizka",
+      },
     },
     {
       name = "Orange Gizka",
       id = "dm_ojgizka_shirt",
-      partId = "dm_orangegizka",
+      clothingType = ClothingTypes.Shirt,
+      parts = {
+        [PartReferenceSlots.Tail] = "dm_orangegizka",
+      },
     },
     {
       name = "Mecha Gizka",
       id = "dm_mechagizka_shirt",
-      partId = "dm_mechagizka",
+      clothingType = ClothingTypes.Shirt,
+      parts = {
+        [PartReferenceSlots.Tail] = "dm_mechagizka",
+      },
     },
     {
       name = "Orange and Green Gizka",
       id = "dm_orangeandgreengizka_shirt",
-      partId = "dm_orangeandgreengizka",
+      clothingType = ClothingTypes.Shirt,
+      parts = {
+        [PartReferenceSlots.Tail] = "dm_orangeandgreengizka",
+      },
     },
     {
       name = "Orange and Black Gizka",
       id = "dm_orangeandblackgizka_shirt",
-      partId = "dm_orangeandblackgizka",
+      clothingType = ClothingTypes.Shirt,
+      parts = {
+        [PartReferenceSlots.Tail] = "dm_orangeandblackgizka",
+      },
     },
     {
       name = "Orange and Black Gizka (2)",
       id = "dm_orangeandblackgizka2_shirt",
-      partId = "dm_orangeandblackgizka2",
+      clothingType = ClothingTypes.Shirt,
+      parts = {
+        [PartReferenceSlots.Tail] = "dm_orangeandblackgizka2",
+      },
     },
   },
 }
