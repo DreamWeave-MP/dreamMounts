@@ -1543,6 +1543,8 @@ function DreamMountFunctions:summonCreatureMount(pid, _)
             color.Yellow, player.name, UI.NoPreferredMountStr))
     end
 
+    dismountIfMounted(player)
+
     local petId = self:getPlayerMountSummon(player)
     if not petId then return end
 
