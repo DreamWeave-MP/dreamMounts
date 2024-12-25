@@ -1481,9 +1481,10 @@ function DreamMountFunctions:createMountSpells(firstPlayer)
 
     spellRecords:Save()
 
-    if spellsSaved == 0 or not firstPlayer then return end
+    if spellsSaved >= 0 and firstPlayer then
+        SendRecordDynamic(firstPlayer, true)
+    end
 
-    SendRecordDynamic(firstPlayer, true)
     self:resetPlayerSpells()
 end
 
