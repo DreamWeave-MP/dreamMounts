@@ -1418,19 +1418,18 @@ end
 function DreamMountFunctions:defaultMountConfig(pid, cmd)
     if not DreamMountFunctions.validateUser(pid) then return end
     ProcessCommand(pid, { 'load', 'custom.dreamMount.dreamMount_defaultConfig' })
-    ProcessCommand(pid, { 'load', 'custom.dreamMount.dreamMount_strings' })
 
     local subArg = cmd[3]
     local doReload = (cmd[4] and cmd[4] == 'true') or (cmd[3] and cmd[3] == 'true')
 
-    if not subArg then
-        SlowSave(Paths.MountConfigPath, DreamMountConfigDefault)
-        SlowSave(Paths.MerchantConfigPath, DreamMountMerchantsDefault)
-        SlowSave(Paths.BodyPartConfigPath, MountBodyPartsDefault)
-        SlowSave(Paths.ClothingConfigPath, MountClothingDefault)
+    if not subArg or (subArg and subArg == 'true') then
+        SlowSave(Paths.MountConfigPath, DreamMountDefaults.Mounts)
+        SlowSave(Paths.MerchantConfigPath, DreamMountDefaults.Merchants)
+        SlowSave(Paths.BodyPartConfigPath, DreamMountDefaults.Parts)
+        SlowSave(Paths.ClothingConfigPath, DreamMountDefaults.Clothes)
         SendMessage(pid, UI.AllDefaultConfigsSaved, false)
     elseif subArg:lower() == "mount" then
-        SlowSave(Paths.MountConfigPath, DreamMountConfigDefault)
+        SlowSave(Paths.MountConfigPath, DreamMountDefaults.Mounts)
         SendMessage(pid, Format("%s%s\n", UI.DefaultConfigSavedString, Paths.MountConfigPath), false)
     elseif subArg:lower() == "merchant" then
         SlowSave(Paths.MerchantConfigPath, DreamMountMerchantsDefault)
@@ -1445,12 +1444,13 @@ function DreamMountFunctions:defaultMountConfig(pid, cmd)
 
     if doReload then
         SendMessage(pid, UI.DefaultConfigsReloading, false)
-        self:loadMountConfig()
+        self:initMountData()
     end
 end
 
 function DreamMountFunctions:reloadMountConfig(pid)
     if not DreamMountFunctions.validateUser(pid) then return end
+    ProcessCommand(pid, { 'load', 'custom.dreamMount.dreamMount_strings' })
     self:initMountData()
     SendMessage(pid, UI.ConfigReloadedMessage, false)
 end
