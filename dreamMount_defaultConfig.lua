@@ -270,6 +270,7 @@ return {
           Luck = 0.80,
           Personality = 0.20,
           Speed = 1.25,
+          Endurance = 0.75,
         },
         aura = {
           RestoreFatigue = 1,
