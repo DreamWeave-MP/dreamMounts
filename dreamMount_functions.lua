@@ -109,43 +109,6 @@ local MountSlotMap = {
     [MountTypes.Shirt] = 'SHIRT',
 }
 
-local BodyPart = {
-    -- Slots as used by bodypart records
-    -- Since clothing and armor records *both*
-    -- Have a part assigned specifically to a bodypart,
-    -- I don't understand what the point of having bodyparts
-    -- Be associated with specific parts is
-    -- Must be some implementation detail related to
-    -- Tying all of the assets together?
-    Slots = {
-        Head = 0,
-        Hair = 1,
-        Neck = 2,
-        Chest = 3,
-        Groin = 4,
-        Hand = 5,
-        Wrist = 6,
-        Forearm = 7,
-        Upperarm = 8,
-        Foot = 9,
-        Ankle = 10,
-        Knee = 11,
-        Upperleg = 12,
-        Clavicle = 13,
-        Tail = 14,
-        LENGTH = 15,
-    },
-    Flags = {
-        Female = 1,
-        Unplayable = 2,
-    },
-    Types = {
-        Skin = 0,
-        Clothing = 1,
-        Armor = 2,
-    },
-}
-
 -- We don't currently use armor types, but we might later and
 -- I don't feel like drawing the enums out again
 ---@diagnostic disable-next-line: unused-local
@@ -1002,17 +965,25 @@ function DreamMountFunctions:createBodyPartRecords(firstPid)
         SetRecordType(BodyPartRecord)
     end
 
-    local clothingType = BodyPart.Types.Clothing
-    local tailSlot = BodyPart.Slots.Tail
-
     local partsSaved = 0
     for _, partData in ipairs(self.mountParts) do
-        assert(partData.id and partData.model, DreamMountStrings.Err.InvalidBodyPartDataErr)
         local newPartId = partData.id
+        local newPartModel = partData.model
+        local newPartSlot = partData.partSlot
+        local newPartType = partData.subType
+
+        local hasValidBodyPartData = newPartId
+            and newPartModel
+            and newPartSlot
+            and newPartType
+
+        assert(hasValidBodyPartData,
+            DreamMountStrings.Err.InvalidBodyPartDataErr)
+
         local newPart = {
-            subtype = clothingType,
-            part = tailSlot,
-            model = partData.model
+            subtype = newPartType,
+            part = newPartSlot,
+            model = newPartModel
         }
 
         permanentParts[newPartId] = newPart

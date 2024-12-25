@@ -58,6 +58,8 @@
 ---@class BodyPart Bodypart record data used by generated clothing records for mounts
 ---@field id string record id of the bodypart to use
 ---@field model string path relative to meshes/ used for the bodypart record
+---@field partSlot BodyPartSlot
+---@field subType BodyPartSubtype
 ---Part field is hardcoded to 14 (tail) and refers to the actual bodypart slot used
 ---Subtype refers to skin/armor/clothing and is 1 (clothing)
 
@@ -123,6 +125,46 @@ local ClothingTypes = {
     Skirt = 7,
     Ring = 8,
     Amulet = 9,
+}
+
+local BodyPart = {
+    -- Slots as used by bodypart records
+    -- Since clothing and armor records *both*
+    -- Have a part assigned specifically to a bodypart,
+    -- I don't understand what the point of having bodyparts
+    -- Be associated with specific parts is
+    -- Must be some implementation detail related to
+    -- Tying all of the assets together?
+    ---@enum BodyPartSlot
+    Slots = {
+        Head = 0,
+        Hair = 1,
+        Neck = 2,
+        Chest = 3,
+        Groin = 4,
+        Hand = 5,
+        Wrist = 6,
+        Forearm = 7,
+        Upperarm = 8,
+        Foot = 9,
+        Ankle = 10,
+        Knee = 11,
+        Upperleg = 12,
+        Clavicle = 13,
+        Tail = 14,
+        LENGTH = 15,
+    },
+    ---@enum BodyPartFlag
+    Flags = {
+        Female = 1,
+        Unplayable = 2,
+    },
+    ---@enum BodyPartSubtype
+    Types = {
+        Skin = 0,
+        Clothing = 1,
+        Armor = 2,
+    },
 }
 
 ---@enum MerchantName
@@ -326,26 +368,38 @@ return {
     {
       id = "dm_mechagizka",
       model = "s3/mount/gizka/mechagizka.nif",
+      partSlot = BodyPart.Slots.Tail,
+      subType = BodyPart.Types.Clothing,
     },
     {
       id = "dm_orangegizka",
       model = "s3/mount/gizka/gizkaora.nif",
+      partSlot = BodyPart.Slots.Tail,
+      subType = BodyPart.Types.Clothing,
     },
     {
       id = "dm_orangeandblackgizka",
       model = "s3/mount/gizka/gizkaorabl.nif",
+      partSlot = BodyPart.Slots.Tail,
+      subType = BodyPart.Types.Clothing,
     },
     {
       id = "dm_orangeandblackgizka2",
-      model = "s3/mount/gizka/gizkaorabl2.nif"
+      model = "s3/mount/gizka/gizkaorabl2.nif",
+      partSlot = BodyPart.Slots.Tail,
+      subType = BodyPart.Types.Clothing,
     },
     {
       id = "dm_orangeandgreengizka",
-      model = "s3/mount/gizka/gizkaoragr.nif"
+      model = "s3/mount/gizka/gizkaoragr.nif",
+      partSlot = BodyPart.Slots.Tail,
+      subType = BodyPart.Types.Clothing,
     },
     {
       id = "dm_redgizka",
       model = "s3/mount/gizka/gizkared.nif",
+      partSlot = BodyPart.Slots.Tail,
+      subType = BodyPart.Types.Clothing,
     },
   },
   ---@type ClothingRecord[]
