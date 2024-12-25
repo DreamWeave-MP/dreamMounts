@@ -590,6 +590,12 @@ local function resetMountSpellForPlayer(player, spellRecords)
     toggleSpell(prevMountSpell, player, spellRecords)
 end
 
+local function resetSummonSpellForPlayer(player, mountData, spellRecords)
+    if not mountData then return end
+    local prevSummonSpell = getPetAuraStrings(mountData)
+    toggleSpell(prevSummonSpell, player, spellRecords)
+end
+
 --- Resets all DreamMount state for a given player
 ---@param player JSONPlayer
 function DreamMountFunctions:clearCustomVariables(player)
@@ -597,9 +603,6 @@ function DreamMountFunctions:clearCustomVariables(player)
     self:despawnMountSummon(player)
     -- Dismount if necessary
     dismountIfMounted(player)
-    -- Remove any applicable spells
-    resetMountSpellForPlayer(player)
-    -- Despawn the bag ref, but don't delete all the player's bags
     self:despawnBagRef(player)
 
     player.data.customVariables[DreamMountVarTable] = {}
@@ -1431,10 +1434,11 @@ function DreamMountFunctions:reloadMountConfig(pid)
     SendMessage(pid, DreamMountStrings.UI.ConfigReloadedMessage, false)
 end
 
-function DreamMountFunctions.resetPlayerSpells()
+function DreamMountFunctions:resetPlayerSpells()
     local spellRecords = RecordStores['spell'].data.permanentRecords
     for _, player in pairs(Players) do
         resetMountSpellForPlayer(player, spellRecords)
+        resetSummonSpellForPlayer(player, self:getMountData(player), spellRecords)
     end
 end
 
@@ -1480,7 +1484,7 @@ function DreamMountFunctions:createMountSpells(firstPlayer)
     if spellsSaved == 0 or not firstPlayer then return end
 
     SendRecordDynamic(firstPlayer, true)
-    self.resetPlayerSpells()
+    self:resetPlayerSpells()
 end
 
 ---@param player JSONPlayer
