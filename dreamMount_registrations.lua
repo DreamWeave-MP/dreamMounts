@@ -155,9 +155,9 @@ end
 ---@type table <Subcommand, CommandId>
 local mountFuncs = {
   menu = 'showPreferredMountMenu',
-  reloadConfig = 'reloadMountConfig',
-  defaultConfig = 'defaultMountConfig',
-  clearPlayerVars = 'clearCustomVariablesCommand',
+  reloadconfig = 'reloadMountConfig',
+  defaultconfig = 'defaultMountConfig',
+  clearplayervars = 'clearCustomVariablesCommand',
   summon = "summonCreatureMount",
   container = "openContainerForNonSummon",
 }
@@ -166,6 +166,7 @@ local mountFuncs = {
 ---@param cmd string[]
 local function handleMountCommand(pid, cmd)
   local subCommand = cmd[2]
+  if subCommand then subCommand = subCommand:lower() end
 
   if not subCommand then DreamMountFunctions:toggleMountCommand(pid)
   elseif subCommand == 'reload' and DreamMountFunctions.validateUser(pid) then reloadMountFuncs(pid)
