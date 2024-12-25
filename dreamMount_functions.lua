@@ -1141,103 +1141,143 @@ function DreamMountFunctions:createMountMenuString(player)
     end
 end
 
-function DreamMountFunctions:toggleMount(player)
-    local pid = player.pid
-    local playerData = player.data
-    local customVariables = getPlayerMountVars(player)
-    local charData = playerData.character
-    local isMounted = customVariables[DreamMountEnabledKey]
-    local mountIndex = customVariables[DreamMountPreferredMountKey]
+---@class MountActivationData
+---@field player JSONPlayer
+---@field mountIndex MountIndex
+---@field mountVariables table<string, any>
+
+---@param mountActivationData MountActivationData
+function DreamMountFunctions:activateMount(mountActivationData)
     local Log = DreamMountStrings.Log
 
-    if not isMounted then
-        if not mountIndex then
-            return player:Message(Format(DreamMountStrings.Patterns.NoPreferredMountMessage,
-                color.Yellow, player.name, DreamMountStrings.UI.NoPreferredMountStr))
-        end
+    local player = mountActivationData.player
+    local playerName = player.name
+    local playerData = player.data
+    local charData = player.data.character
+    local pid = player.pid
 
+    local mountIndex = mountActivationData.mountIndex
 
-        local mount = self.mountConfig[mountIndex]
+    if not mountIndex then return player:Message(
+            Format(
+                DreamMountStrings.Patterns.NoPreferredMountMessage,
+                color.Yellow, playerName, DreamMountStrings.UI.NoPreferredMountStr
+            )
+        )
+    end
+    local mountVariables = mountActivationData.mountVariables
+    local mount = self.mountConfig[mountIndex]
 
-        if not hasMountKey(player, mount) then return end
+    if not hasMountKey(player, mount) then return end
 
-        local mountId = mount.item
-        local mountName = mount.name
-        local mountType = mount.mountType or MountTypes.Shirt
-        local mountSlot = MountSlotMap[mountType]
-        local mappedEquipSlot = EquipEnums[mountSlot]
+    local mountId = mount.item
+    local mountType = mount.mountType or MountTypes.Shirt
+    local mountSlot = MountSlotMap[mountType]
+    local mappedEquipSlot = EquipEnums[mountSlot]
 
-        customVariables[DreamMountSummonWasEnabledKey] = customVariables[DreamMountSummonRefNumKey] ~= nil
-        self:despawnBagRef(player)
-        self:despawnMountSummon(player)
+    mountVariables[DreamMountSummonWasEnabledKey] = mountVariables[DreamMountSummonRefNumKey] ~= nil
+    self:despawnBagRef(player)
+    self:despawnMountSummon(player)
 
-        local replaceItem = playerData.equipment[mappedEquipSlot]
+    local replaceItem = playerData.equipment[mappedEquipSlot]
 
-        if replaceItem.refId and replaceItem.refId ~= ''
-        then replaceItem = replaceItem.refId
-        else replaceItem = nil
-        end
+    if replaceItem.refId and replaceItem.refId ~= ''
+    then replaceItem = replaceItem.refId
+    else replaceItem = nil
+    end
 
-        addOrRemoveItem(true, mountId, player)
+    addOrRemoveItem(true, mountId, player)
+    player:updateEquipment {
+        [mountSlot] = mountId
+    }
+
+    if not mountType or mountType == MountTypes.Shirt then
+        enableModelOverrideMount(player, charData, mount.model)
+        RunConsoleCommandOnPlayer(pid, 'startscript DreamMountForceThirdPerson')
+    elseif mountType == MountTypes.Gauntlet then
+        RunConsoleCommandOnPlayer(pid, 'startscript DreamMountMount')
+    end
+
+    mountLog(Format(Log.MountStr, playerName, mount.name))
+
+    mountVariables[DreamMountPrevItemId] = replaceItem
+    mountVariables[DreamMountPrevMountTypeKey] = mountType
+    mountVariables[DreamMountEnabledKey] = true
+end
+
+---@class MountDeactivationData
+---@field player JSONPlayer
+---@field mountVariables table<string, any>
+
+---@param mountDeactivationData MountDeactivationData
+function DreamMountFunctions:deactivateMount(mountDeactivationData)
+    local Log = DreamMountStrings.Log
+
+    local player = mountDeactivationData.player
+    local playerName = player.name
+    local mountVariables = mountDeactivationData.mountVariables
+
+    local playerData = player.data
+    local charData = playerData.character
+    local pid = player.pid
+
+    for _, mountData in ipairs(self.mountConfig) do
+        addOrRemoveItem(false, mountData.item, player)
+    end
+
+    local lastMountType = mountVariables[DreamMountPrevMountTypeKey]
+
+    if not lastMountType then
+        error(Format(DreamMountStrings.Err.NoPrevMountErr, playerName))
+    elseif lastMountType == MountTypes.Shirt then
+        charData.modelOverride = nil
+        SetModel(pid, '')
+        SendBaseInfo(pid)
+        RunConsoleCommandOnPlayer(pid, 'startscript DreamMountDisableForceThirdPerson')
+    elseif lastMountType == MountTypes.Gauntlet then
+        RunConsoleCommandOnPlayer(pid, 'startscript DreamMountDismount')
+    end
+
+    local prevItemId = mountVariables[DreamMountPrevItemId]
+    if prevItemId and ContainsItem(player.data.inventory, prevItemId) then
+        local equipmentSlot = MountSlotMap[lastMountType]
         player:updateEquipment {
-            [mountSlot] = mountId
+            [equipmentSlot] = prevItemId
         }
+        mountVariables[DreamMountPrevItemId] = nil
+    end
 
-        if not mountType or mountType == MountTypes.Shirt then
-            enableModelOverrideMount(player, charData, mount.model)
-            RunConsoleCommandOnPlayer(pid, 'startscript DreamMountForceThirdPerson')
-        elseif mountType == MountTypes.Gauntlet then
-            RunConsoleCommandOnPlayer(pid, 'startscript DreamMountMount')
-        end
+    mountLog(Format(Log.DismountStr, playerName, lastMountType, prevItemId))
+    mountVariables[DreamMountPrevItemId] = nil
+    mountVariables[DreamMountPrevMountTypeKey] = nil
+    mountVariables[DreamMountEnabledKey] = false
 
-        mountLog(Format(Log.MountStr, player.name, mountName))
+    -- Maybe we should add a command to disable this functionality?
+    -- Or just disable the summon?
+    if mountVariables[DreamMountSummonWasEnabledKey] then
+        self:summonCreatureMount(pid)
+    end
+end
 
-        customVariables[DreamMountPrevItemId] = replaceItem
-        customVariables[DreamMountPrevMountTypeKey] = mountType
-        customVariables[DreamMountEnabledKey] = true
-    else
-        for _, mountData in ipairs(self.mountConfig) do
-            addOrRemoveItem(false, mountData.item, player)
-        end
+function DreamMountFunctions:toggleMount(player)
+    local mountVariables = getPlayerMountVars(player)
+    local isMounted = mountVariables[DreamMountEnabledKey]
+    local mountIndex = mountVariables[DreamMountPreferredMountKey]
 
-        local lastMountType = customVariables[DreamMountPrevMountTypeKey]
-
-        if not lastMountType then
-            error(Format(DreamMountStrings.Err.NoPrevMountErr, player.name))
-        elseif lastMountType == MountTypes.Shirt then
-            charData.modelOverride = nil
-            SetModel(pid, '')
-            SendBaseInfo(pid)
-            RunConsoleCommandOnPlayer(pid, 'startscript DreamMountDisableForceThirdPerson')
-        elseif lastMountType == MountTypes.Gauntlet then
-            RunConsoleCommandOnPlayer(pid, 'startscript DreamMountDismount')
-        end
-
-        local prevItemId = customVariables[DreamMountPrevItemId]
-        if prevItemId and ContainsItem(playerData.inventory, prevItemId) then
-            local equipmentSlot = MountSlotMap[lastMountType]
-            player:updateEquipment {
-                 [equipmentSlot] = prevItemId
-            }
-            customVariables[DreamMountPrevItemId] = nil
-        end
-
-        mountLog(Format(Log.DismountStr, player.name, lastMountType, prevItemId))
-        customVariables[DreamMountPrevItemId] = nil
-        customVariables[DreamMountPrevMountTypeKey] = nil
-        customVariables[DreamMountEnabledKey] = false
-
-        -- Maybe we should add a command to disable this functionality?
-        -- Or just disable the summon?
-        if customVariables[DreamMountSummonWasEnabledKey] then
-            self:summonCreatureMount(pid)
-        end
+    if not isMounted then self:activateMount {
+            player = player,
+            mountIndex = mountIndex,
+            mountVariables = mountVariables,
+        } else self:deactivateMount {
+            player = player,
+            mountVariables = mountVariables,
+        }
     end
 
     if not mountIndex then return end
 
     local targetSpell = self:getMountSpellIdString(mountIndex)
-    customVariables[DreamMountPrevSpellId] = (not isMounted and targetSpell) or nil
+    mountVariables[DreamMountPrevSpellId] = (not isMounted and targetSpell) or nil
     player:updateSpellbook {
         [targetSpell] = not isMounted,
     }
