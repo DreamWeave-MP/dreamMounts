@@ -632,6 +632,7 @@ local function sendCreatureAttributePacket(attributePacketData)
     local summonRefNum = summonSplitIndex[1]
     local summonMpNum = summonSplitIndex[2]
 
+    ---@type ObjectDataTable
     local objectData = {
         clear = true,
         pid = player.pid,
