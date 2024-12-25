@@ -8,16 +8,16 @@ local Navy = color.Navy
 local Red = color.Red
 
 return {
-  {
-    -- Paths
+
+  Paths = {
     AnimRigPath = 'rot/anim/%s.nif',
     BodyPartConfigPath = 'custom/dreamMountBodyParts.json',
     MerchantConfigPath = 'custom/dreamMountMerchants.json',
     ClothingConfigPath = 'custom/dreamMountClothing.json',
     MountConfigPath = 'custom/dreamMountConfig.json',
   },
-  {
-    -- Errors
+
+  Err = {
     CreatePetNoIdErr = "No petId was provided to create the pet record!\n",
     CreatePetNoMountNameErr = "No mountName was provided to create the pet record!\n",
     CreatePetNoPetDataErr = "No playerPetData was provided to create the pet record!\n",
@@ -49,16 +49,16 @@ return {
     InvalidBodyPartDataErr = "Id and model fields are required for all bodypart instances!\n",
     InvalidClothingDataErr = "Id, name, and partId fields are required for all clothing instances!\n",
   },
-  {
-    -- Patterns
+
+  Patterns = {
     LogStr = '[ %s ]: %s',
     MenuItem = '%s\n%s',
     NoPreferredMountMessage = '%s%s %s',
     SingleVarReset = '%s%s.\n',
     SpellNameTemplate = '%s Speed Buff',
   },
-  {
-    -- Log Messages
+
+  Log = {
     CreatedSpellRecordStr = 'Created spell record %s',
     DismissedStr = "%s dismissed their mount!",
     DismountStr = '%s dismounted from mount of type: %s, replacing previously equipped item: %s',
@@ -69,8 +69,8 @@ return {
     RemovingRecordStr = "Removing %s from recordStore on behalf of %s",
     SuccessfulContainerDespawnStr = "Successfully despawned old %s container with index %s for player %s",
   },
-  {
-    -- UI Messages
+
+  UI = {
     ActivateMenuChoices = "Open Pack;Dismiss;Pet;Ride;Nothing",
     ActivateMenuHeader = "What would you like to do with your mount?",
     AllDefaultConfigsSaved = Format(
@@ -123,4 +123,5 @@ return {
       Red),
     UnownedMountActivateStr = Red .. "You cannot activate this mount as it does not belong to you!",
   }
+
 }
