@@ -372,6 +372,7 @@ local AttributeNames = {
 }
 
 local Effects = {
+
     FortifyAttribute = function(attributeId, magnitudeMin, magnitudeMax)
         assert(attributeId >= 0 and attributeId <= 7, Format(DreamMountStrings.Err.ImpossibleAttributeIDErr, attributeId))
         assert(magnitudeMin, DreamMountStrings.Err.InvalidSpellEffectErrorStr .. Traceback(3))
@@ -384,16 +385,7 @@ local Effects = {
             skill = -1,
         }
     end,
-    FortifyFatigue = function(magnitudeMin, magnitudeMax)
-        assert(magnitudeMin, DreamMountStrings.Err.InvalidSpellEffectErrorStr .. Traceback(3))
-        return {
-            id = FortifyFatigue,
-            rangeType = 0,
-            magnitudeMin = magnitudeMin,
-            magnitudeMax = magnitudeMax or magnitudeMin,
-            skill = -1,
-        }
-    end,
+
     RestoreFatigue = function(magnitudeMin, magnitudeMax)
         assert(magnitudeMin, DreamMountStrings.Err.InvalidSpellEffectErrorStr .. Traceback(3))
         return {

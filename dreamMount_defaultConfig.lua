@@ -174,7 +174,6 @@ return {
         },
         aura = {
           RestoreFatigue = 1,
-          FortifyFatigue = 50,
         },
         spells = {},
       },
