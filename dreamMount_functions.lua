@@ -1415,17 +1415,21 @@ function DreamMountFunctions:defaultMountConfig(pid, cmd)
         SlowSave(Paths.ClothingConfigPath, DreamMountDefaults.Clothes)
         SendMessage(pid, UI.AllDefaultConfigsSaved, false)
     elseif subArg == "mount" then
-        SlowSave(Paths.MountConfigPath, DreamMountDefaults.Mounts)
-        SendMessage(pid, Format("%s%s\n", UI.DefaultConfigSavedString, Paths.MountConfigPath), false)
+        local path = Paths.MountConfigPath
+        SlowSave(path, DreamMountDefaults.Mounts)
+        SendMessage(pid, Format("%s%s\n", UI.DefaultConfigSavedString, path), false)
     elseif subArg == "merchant" then
-        SlowSave(Paths.MerchantConfigPath, DreamMountDefaults.Merchants)
-        SendMessage(pid, Format("%s%s\n", UI.DefaultConfigSavedString, Paths.MerchantConfigPath), false)
+        local path = Paths.MerchantConfigPath
+        SlowSave(path, DreamMountDefaults.Merchants)
+        SendMessage(pid, Format("%s%s\n", UI.DefaultConfigSavedString, path), false)
     elseif subArg == "bodypart" then
-        SlowSave(Paths.BodyPartConfigPath, DreamMountDefaults.Parts)
-        SendMessage(pid, Format("%s%s\n", UI.DefaultConfigSavedString, Paths.BodyPartConfigPath), false)
+        local path = Paths.BodyPartConfigPath
+        SlowSave(path, DreamMountDefaults.Parts)
+        SendMessage(pid, Format("%s%s\n", UI.DefaultConfigSavedString, path), false)
     elseif subArg == "clothing" then
-        SlowSave(Paths.ClothingConfigPath, DreamMountDefaults.Clothes)
-        SendMessage(pid, Format("%s%s\n", UI.DefaultConfigSavedString, Paths.ClothingConfigPath), false)
+        local path = Paths.ClothingConfigPath
+        SlowSave(path, DreamMountDefaults.Clothes)
+        SendMessage(pid, Format("%s%s\n", UI.DefaultConfigSavedString, path), false)
     end
 
     if doReload then
