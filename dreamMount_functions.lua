@@ -430,9 +430,7 @@ function DreamMountFunctions:updateCurrentMountContainer(player)
     local containerIndex = Concat(containerData.index, '-')
 
     cellObjectData[containerIndex].inventory = containerData.inventory
-    -- Make another function (or use this one) which actually
-    -- sends a packet containing the relevant inventory contents!
-    -- For now we just want to see the items appear in JSON.
+
     ClearObjectList(pid)
     SetObjectListPid(pid)
     SetObjectListCell(playerCellId)
