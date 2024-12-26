@@ -25,6 +25,11 @@ local GetActorListSize = tes3mp.GetActorListSize
 local GetActorMpNum = tes3mp.GetActorMpNum
 local GetActorRefNum = tes3mp.GetActorRefNum
 local GetCell = tes3mp.GetCell
+local GetInventoryChangesAction = tes3mp.GetInventoryChangesAction
+local GetInventoryChangesSize = tes3mp.GetInventoryChangesSize
+local GetInventoryItemCount = tes3mp.GetInventoryItemCount
+local GetInventoryItemRefId = tes3mp.GetInventoryItemRefId
+local GetItemIndex = inventoryHelper.getItemIndex
 local GetPosX = tes3mp.GetPosX
 local GetPosY = tes3mp.GetPosY
 local ListBox = tes3mp.ListBox
@@ -353,6 +358,38 @@ local function getMountActiveEffects(inputMountEffects)
     end
 
     if #mountEffects > 0 then return mountEffects end
+end
+
+--- Enforces that either:
+--- 1. If mounted, the player cannot remove the mount clothing item from their inventory
+--- 2. If mounted or using a summon, removing the relevant key for the mount will unsummon it or disengage the mount as needed
+---@param player JSONPlayer
+---@param itemChangeIndex integer
+---@param keyId string
+---@param mountItemId string
+---@return true|nil DisableOtherHandlers If true, indicates that EventStatus should return false for this call
+local function correctMountStateOnInventory(player, itemChangeIndex, keyId, mountItemId)
+    local pid = player.pid
+    local itemId = GetInventoryItemRefId(pid, itemChangeIndex)
+    if not itemId then return end
+
+    if itemId == mountItemId then
+        CloseMenu(player)
+        return true
+    elseif itemId == keyId then
+        local inventory = player.data.inventory
+        local itemIndex = GetItemIndex(inventory, keyId)
+
+        local countRemoved = GetInventoryItemCount(pid, itemChangeIndex)
+        local originalCount = (itemIndex ~= nil and inventory[itemIndex].count) or 0
+        local countRemaining = originalCount  - countRemoved
+
+        if itemIndex and countRemaining > 0 then return end
+
+        player:Message(DreamMountStrings.UI.DroppedMountWhileMounted)
+        dismountIfMounted(player)
+        DreamMountFunctions:despawnMountSummon(player)
+    end
 end
 
 function DreamMountFunctions.addMountSpellEffect(effects, spellId, spellName, permanentSpells)
@@ -1744,21 +1781,21 @@ end
 
 function DreamMountFunctions:denyMountClothingRemoval(_, pid, _)
     local player = Players[pid]
-    if not getPlayerMountVars(player)[DreamMountEnabledKey] then return end
+    local mountVars = getPlayerMountVars(player)
+    if not mountVars[DreamMountEnabledKey] and not mountVars[DreamMountSummonRefNumKey] then return end
 
-    if tes3mp.GetInventoryChangesAction(pid) ~= RemoveFromInventory then return end
+    if GetInventoryChangesAction(pid) ~= RemoveFromInventory then return end
 
-    local itemChangesCount = tes3mp.GetInventoryChangesSize(pid)
+    local numChanges = GetInventoryChangesSize(pid) - 1
 
     local mountData = self:getMountData(player)
+    local keyId = getMountKeyString(mountData)
     local mountItemId = mountData.item:lower()
 
-    for index = 0, itemChangesCount - 1 do
-        local ObjectRefId = tes3mp.GetInventoryItemRefId(pid, index)
-
-        if ObjectRefId and ObjectRefId == mountItemId then
-            CloseMenu(pid)
-            return customEventHooks.makeEventStatus(false, false)
+    for index = 0, numChanges do
+        if correctMountStateOnInventory(player, index,
+                keyId, mountItemId) then
+            return EventStatus(false, false)
         end
     end
 end

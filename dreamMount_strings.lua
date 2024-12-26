@@ -98,6 +98,7 @@ return {
       MediumBlue,
       Green),
     DefaultListString = "Cancel",
+    DroppedMountWhileMounted = Red .. "You've dropped your mount key while a summon or mount was active! Dismounting . . .\n",
     InvalidResetPidErr = "%sInvalid player id provided for variable reset %s!\n",
     MissingMountKey = Red .. "You don't have the key for your mount!\n",
     MountMustBeSummonedStr = Red .. "Your currently selected mount must be summoned to use its container!\n",
