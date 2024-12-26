@@ -181,11 +181,11 @@ end
 local function getKeyTemplate(mountData)
     local newKey = {}
 
-    for k, v in pairs(KeyItemTemplate) do newKey[k] = v end
-    for k, v in pairs(mountData.key or {}) do newKey[k] = v end
+    for k, v in pairs(KeyItemTemplate) do rawset(newKey, k, v) end
+    for k, v in pairs(mountData.key or {}) do rawset(newKey, k, v) end
 
     if not newKey.name then
-        newKey.name = Format("%s %s", mountData.name, DefaultKeyName)
+        rawset(newKey, 'name', Format("%s %s", mountData.name, DefaultKeyName))
     end
 
     return newKey
