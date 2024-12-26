@@ -1122,11 +1122,12 @@ function DreamMountFunctions:activateMount(mountActivationData)
     self:despawnBagRef(player)
     self:despawnMountSummon(player)
 
-    local replaceItem = playerData.equipment[mappedEquipSlot]
+    local equippedSlot = playerData.equipment[mappedEquipSlot]
+    local replaceItem
 
-    if replaceItem.refId and replaceItem.refId ~= ''
-    then replaceItem = replaceItem.refId
-    else replaceItem = nil
+    local existingItemInSlot = equippedSlot.refId
+    if existingItemInSlot and existingItemInSlot ~= '' then
+        replaceItem = existingItemInSlot
     end
 
     addOrRemoveItem(true, mountId, player)
