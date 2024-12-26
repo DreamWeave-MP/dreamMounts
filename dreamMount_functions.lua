@@ -241,13 +241,13 @@ end
 --- Then invoke it a second time to restore the HUD
 local function CloseMenu(player)
     local pid = player.pid
+    ClearObjectList()
+    SetObjectListPid(pid)
+    SetObjectListCell(player.data.location.cell)
+    SetObjectListConsoleCommand("TM")
+    SetPlayerAsObject(pid)
+    AddObject()
     for _ = 1, 2 do
-        ClearObjectList()
-        SetObjectListPid(pid)
-        SetObjectListCell(player.data.location.cell)
-        SetObjectListConsoleCommand("TM")
-        SetPlayerAsObject(pid)
-        AddObject()
         table.insert(player.consoleCommandsQueued, "TM")
         SendConsoleCommand(false)
     end
