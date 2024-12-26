@@ -335,6 +335,9 @@ local Effects = {
     end,
 }
 
+---@param mountData MountData
+---@return string PetAuraId - Record Id of the pet aura
+---@return string PetAuraName Human-readable name of the pet aura
 local function getPetAuraStrings(mountData)
     assert(mountData.name ~= nil and mountData.name ~= '', DreamMountStrings.Err.ImpossibleMountNameErr)
     return Format("%s_aura", mountData.name):lower(), Format("%s Aura", mountData.name)
