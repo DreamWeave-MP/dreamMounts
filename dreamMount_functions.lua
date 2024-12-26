@@ -1165,7 +1165,7 @@ function DreamMountFunctions:activateMount(player, mountVariables)
         [mountSlot] = mountId
     }
 
-    if not mountType or mountType == MountTypes.Shirt then
+    if mountType == MountTypes.Shirt then
         enableModelOverrideMount(player, charData, mount.model)
         RunConsoleCommandOnPlayer(pid, 'startscript DreamMountForceThirdPerson')
     elseif mountType == MountTypes.Gauntlet then
