@@ -1119,34 +1119,26 @@ function DreamMountFunctions:createMountMenuString(player)
     end
 end
 
----@class MountActivationData
----@field player JSONPlayer
----@field mountIndex MountIndex
----@field mountVariables table<string, any>
-
----@param mountActivationData MountActivationData
-function DreamMountFunctions:activateMount(mountActivationData)
+---@param player JSONPlayer
+---@param mountVariables table<string, any>
+function DreamMountFunctions:activateMount(player, mountVariables)
     local Log = DreamMountStrings.Log
+    if not hasMountKey(player) then return end
 
-    local player = mountActivationData.player
     local playerName = player.name
     local playerData = player.data
     local charData = player.data.character
     local pid = player.pid
 
-    local mountIndex = mountActivationData.mountIndex
+    local mount = self:getMountData(player)
 
-    if not mountIndex then return player:Message(
+    if not mount then return player:Message(
             Format(
                 DreamMountStrings.Patterns.NoPreferredMountMessage,
                 color.Yellow, playerName, DreamMountStrings.UI.NoPreferredMountStr
             )
         )
     end
-    local mountVariables = mountActivationData.mountVariables
-    local mount = self.mountConfig[mountIndex]
-
-    if not hasMountKey(player) then return end
 
     local mountId = mount.item
     local mountType = mount.mountType or MountTypes.Shirt
@@ -1184,25 +1176,19 @@ function DreamMountFunctions:activateMount(mountActivationData)
     mountVariables[DreamMountEnabledKey] = true
 end
 
----@class MountDeactivationData
----@field player JSONPlayer
----@field mountVariables table<string, any>
-
----@param mountDeactivationData MountDeactivationData
-function DreamMountFunctions:deactivateMount(mountDeactivationData)
+---@param player JSONPlayer
+---@param mountVariables table<string, any>
+function DreamMountFunctions:deactivateMount(player, mountVariables)
     local Log = DreamMountStrings.Log
 
-    local player = mountDeactivationData.player
     local playerName = player.name
-    local mountVariables = mountDeactivationData.mountVariables
-
     local playerData = player.data
     local charData = playerData.character
     local pid = player.pid
 
-    for _, mountData in ipairs(self.mountConfig) do
-        addOrRemoveItem(false, mountData.item, player)
-    end
+    local mountData = self:getMountData(player)
+    assert(mountData, Traceback())
+    addOrRemoveItem(false, mountData.item, player)
 
     local lastMountType = mountVariables[DreamMountPrevMountTypeKey]
 
@@ -1240,20 +1226,12 @@ end
 
 function DreamMountFunctions:toggleMount(player)
     local mountVariables = getPlayerMountVars(player)
-    local isMounted = mountVariables[DreamMountEnabledKey]
     local mountIndex = mountVariables[DreamMountPreferredMountKey]
-
-    if not isMounted then self:activateMount {
-            player = player,
-            mountIndex = mountIndex,
-            mountVariables = mountVariables,
-        } else self:deactivateMount {
-            player = player,
-            mountVariables = mountVariables,
-        }
-    end
-
     if not mountIndex then return end
+
+    local isMounted = mountVariables[DreamMountEnabledKey]
+    local mountFunc = isMounted and 'deactivateMount' or 'activateMount'
+    self[mountFunc](self, player, mountVariables)
 
     local targetSpell = self:getMountSpellIdString(mountIndex)
     mountVariables[DreamMountPrevSpellId] = (not isMounted and targetSpell) or nil
