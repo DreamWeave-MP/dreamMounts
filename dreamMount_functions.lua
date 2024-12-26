@@ -263,10 +263,16 @@ local function dismountIfMounted(player)
     end
 end
 
-local function hasMountKey(player, mountData)
-    local inventory = player.data.inventory
+--- Returns whether the player has the necessary key for their mount,
+--- Or emits a warning message to them if they do not.
+--- NOTE: ContainsItem only works with handlers, since validators won't have taken the inventory changes into account yet
+--- So DON'T try to use this on the inventory validators like you were just thinking about doing
+---@param player JSONPlayer
+---@return true|nil ContainsItem True if the player has the item, nil if the message is emitted due to short circuiting
+local function hasMountKey(player)
+    local mountData = DreamMountFunctions:getMountData(player)
     local keyId = getMountKeyString(mountData)
-    return ContainsItem(inventory, keyId) or player:Message(DreamMountStrings.UI.MissingMountKey)
+    return ContainsItem(player.data.inventory, keyId) or player:Message(DreamMountStrings.UI.MissingMountKey)
 end
 
 local function buildSpellEffectString(mountSpellRecordId, mountSpell)
@@ -1105,7 +1111,7 @@ function DreamMountFunctions:activateMount(mountActivationData)
     local mountVariables = mountActivationData.mountVariables
     local mount = self.mountConfig[mountIndex]
 
-    if not hasMountKey(player, mount) then return end
+    if not hasMountKey(player) then return end
 
     local mountId = mount.item
     local mountType = mount.mountType or MountTypes.Shirt
@@ -1581,7 +1587,7 @@ function DreamMountFunctions:summonCreatureMount(pid, _)
 
     local mountData = self.mountConfig[preferredMount]
 
-    if not hasMountKey(player, mountData) then return end
+    if not hasMountKey(player) then return end
 
     local mountName = mountData.name
     if not mountData.petData then
